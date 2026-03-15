@@ -1,0 +1,22 @@
+{
+  "name": "@afps-spec/schema",
+  "version": "1.0.0",
+  "type": "module",
+  "files": [
+    "src",
+    "v1"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./v1/*": "./v1/*"
+  },
+  "scripts": {
+    "generate": "bun src/generate.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

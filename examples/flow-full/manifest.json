@@ -1,0 +1,127 @@
+{
+  "$schema": "https://afps.appstrate.dev/schema/v1/flow.schema.json",
+  "name": "@example/customer-intake",
+  "version": "1.2.0",
+  "type": "flow",
+  "schemaVersion": "1.0",
+  "displayName": "Customer Intake Assistant",
+  "description": "Collects inbound requests and prepares a structured summary.",
+  "keywords": ["workflow", "intake", "support"],
+  "license": "MIT",
+  "repository": "https://example.com/afps/customer-intake",
+  "author": "AFPS Examples",
+  "dependencies": {
+    "skills": {
+      "@example/rewrite-tone": "^1.0.0"
+    },
+    "tools": {
+      "@example/fetch-json": "^1.0.0"
+    },
+    "providers": {
+      "@example/gmail": "^1.0.0"
+    }
+  },
+  "providersConfiguration": {
+    "@example/gmail": {
+      "scopes": ["gmail.readonly", "gmail.send"],
+      "connectionMode": "admin"
+    }
+  },
+  "input": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "inbox_query": {
+          "type": "string",
+          "description": "Gmail search query",
+          "placeholder": "label:inbox newer_than:7d"
+        },
+        "attachments": {
+          "type": "file",
+          "description": "Optional supporting files",
+          "accept": ".pdf,.docx",
+          "maxSize": 10485760,
+          "multiple": true,
+          "maxFiles": 5
+        },
+        "priority": {
+          "type": "string",
+          "description": "Priority override",
+          "default": "normal",
+          "enum": ["low", "normal", "high"]
+        }
+      },
+      "required": ["inbox_query"],
+      "propertyOrder": ["inbox_query", "attachments", "priority"]
+    }
+  },
+  "output": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "Final summary"
+        },
+        "ticket_count": {
+          "type": "number",
+          "description": "Number of created tickets"
+        },
+        "needs_follow_up": {
+          "type": "boolean",
+          "description": "Whether a human follow-up is required"
+        },
+        "labels": {
+          "type": "array",
+          "description": "Labels applied to the request"
+        }
+      },
+      "required": ["summary", "ticket_count", "needs_follow_up"],
+      "propertyOrder": ["summary", "ticket_count", "needs_follow_up", "labels"]
+    }
+  },
+  "config": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "team_name": {
+          "type": "string",
+          "description": "Destination team",
+          "default": "Support"
+        },
+        "language": {
+          "type": "string",
+          "description": "Response language",
+          "default": "en",
+          "enum": ["en", "fr"]
+        },
+        "max_messages": {
+          "type": "number",
+          "description": "Maximum emails to inspect",
+          "default": 25
+        },
+        "emit_debug": {
+          "type": "boolean",
+          "description": "Include debug traces",
+          "default": false
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Arbitrary metadata object"
+        }
+      },
+      "required": ["team_name"],
+      "propertyOrder": [
+        "team_name",
+        "language",
+        "max_messages",
+        "emit_debug",
+        "metadata"
+      ]
+    }
+  },
+  "execution": {
+    "timeout": 300,
+    "outputRetries": 2
+  }
+}

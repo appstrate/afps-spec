@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://afps.appstrate.dev/schema/v1/skill.schema.json",
+  "title": "AFPS Skill Manifest",
+  "description": "Manifest schema for AFPS skill packages. A skill is a reusable prompt with optional frontmatter metadata.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "const": "skill"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9]\\d*)$"
+    },
+    "dependencies": {
+      "type": "object",
+      "properties": {
+        "skills": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tools": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "providers": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "type"
+  ],
+  "additionalProperties": {}
+}

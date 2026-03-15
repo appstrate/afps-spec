@@ -1,0 +1,37 @@
+# markdownlint configuration for the AFPS spec repository
+
+# Disable line length — spec tables and diagrams exceed 80 chars by design
+MD013: false
+
+# Allow multiple top-level headings — spec.md has title + appendices
+MD025: false
+
+# Allow HTML — copyright notice uses &copy;
+MD033: false
+
+# Allow duplicate headings — field names repeat across sections (e.g. "type", "description")
+MD024: false
+
+# Allow trailing punctuation in headings — section numbers use dots
+MD026: false
+
+# Disable blanks-around-headings — spec field definitions use heading + list without blank line
+MD022: false
+
+# Disable blanks-around-lists — spec field definitions start lists immediately after heading
+MD032: false
+
+# Disable blanks-around-fences — README quick start uses fenced blocks inside list context
+MD031: false
+
+# Disable no-multiple-blanks — minor formatting preference
+MD012: false
+
+# Disable bare URLs — email addresses in CODE_OF_CONDUCT
+MD034: false
+
+# Disable fenced-code-language — some code blocks are plain text
+MD040: false
+
+# Disable table-column-style — tables in primer use mixed alignment
+MD060: false

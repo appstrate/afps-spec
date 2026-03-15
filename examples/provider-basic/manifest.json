@@ -1,0 +1,32 @@
+{
+  "$schema": "https://afps.appstrate.dev/schema/v1/provider.schema.json",
+  "name": "@example/internal-api",
+  "version": "1.0.0",
+  "type": "provider",
+  "displayName": "Internal API",
+  "description": "HTTP Basic authentication for an internal REST API.",
+  "categories": ["internal", "api"],
+  "definition": {
+    "authMode": "basic",
+    "credentialSchema": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "API username"
+        },
+        "password": {
+          "type": "string",
+          "description": "API password"
+        }
+      },
+      "required": ["username", "password"]
+    },
+    "credentialHeaderName": "Authorization",
+    "credentialHeaderPrefix": "Basic",
+    "authorizedUris": [
+      "https://api.internal.example.com/*"
+    ],
+    "allowAllUris": false
+  }
+}

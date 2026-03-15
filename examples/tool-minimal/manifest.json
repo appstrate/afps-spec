@@ -1,0 +1,22 @@
+{
+  "$schema": "https://afps.appstrate.dev/schema/v1/tool.schema.json",
+  "name": "@example/fetch-json",
+  "version": "1.0.0",
+  "type": "tool",
+  "displayName": "Fetch JSON",
+  "entrypoint": "tool.ts",
+  "tool": {
+    "name": "fetch_json",
+    "description": "Fetch JSON from a URL and return the parsed response.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "HTTP or HTTPS URL"
+        }
+      },
+      "required": ["url"]
+    }
+  }
+}

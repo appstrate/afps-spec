@@ -1,0 +1,31 @@
+{
+  "$schema": "https://afps.appstrate.dev/schema/v1/provider.schema.json",
+  "name": "@example/openai",
+  "version": "1.0.0",
+  "type": "provider",
+  "displayName": "OpenAI",
+  "description": "OpenAI API connector using API key authentication.",
+  "iconUrl": "https://cdn.simpleicons.org/openai",
+  "categories": ["ai", "language-model"],
+  "docsUrl": "https://platform.openai.com/docs/api-reference",
+  "definition": {
+    "authMode": "api_key",
+    "credentialSchema": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string",
+          "description": "OpenAI API key"
+        }
+      },
+      "required": ["apiKey"]
+    },
+    "credentialFieldName": "apiKey",
+    "credentialHeaderName": "Authorization",
+    "credentialHeaderPrefix": "Bearer",
+    "authorizedUris": [
+      "https://api.openai.com/*"
+    ],
+    "allowAllUris": false
+  }
+}

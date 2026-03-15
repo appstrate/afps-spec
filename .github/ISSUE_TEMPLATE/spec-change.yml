@@ -1,0 +1,50 @@
+name: Spec Change Proposal
+description: Propose a change to the AFPS specification
+labels: ["spec-change"]
+body:
+  - type: dropdown
+    id: change-type
+    attributes:
+      label: Change type
+      options:
+        - Editorial (typo, clarification, no interoperability impact)
+        - Additive (new optional field, new example, backward-compatible)
+        - Breaking (changes validation rules, field semantics, or archive layout)
+    validations:
+      required: true
+
+  - type: input
+    id: sections
+    attributes:
+      label: Affected section(s)
+      description: Which section(s) of spec.md does this change affect?
+      placeholder: "e.g. §4.2 Manifest Fields, §5.1 ZIP Layout"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this change needed? Link to real-world usage or implementation experience if possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the change in detail. Include before/after examples if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: |
+        How does this change affect existing producers and consumers?
+        For breaking changes, describe the migration path.
+      placeholder: "e.g. No impact — purely editorial. / Existing manifests without the new field remain valid."
+    validations:
+      required: true
