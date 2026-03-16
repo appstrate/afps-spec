@@ -11,7 +11,10 @@
     "./v1/*": "./v1/*"
   },
   "scripts": {
-    "generate": "bun src/generate.ts"
+    "generate": "bun src/generate.ts",
+    "check": "bun src/generate.ts --check",
+    "test": "bun test",
+    "test:conformance": "bun test tests/conformance.test.ts"
   },
   "dependencies": {
     "zod": "^4.3.6"

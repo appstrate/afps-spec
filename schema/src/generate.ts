@@ -3,18 +3,22 @@
  *
  * Change MAJOR to generate schemas for a different spec version.
  *
- * Usage: bun src/generate.ts  (from schema/)
+ * Usage:
+ *   bun src/generate.ts          Generate/update JSON schemas
+ *   bun src/generate.ts --check  Verify committed schemas match Zod source (CI)
  */
 
 import { toJSONSchema } from "zod/v4/core";
 import { resolve, dirname } from "node:path";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { createSchemas } from "./schemas.ts";
 
 const MAJOR = 1;
 const VERSION_TAG = `v${MAJOR}`;
 const BASE_URL = "https://afps.appstrate.dev/schema";
 const OUTPUT_DIR = resolve(dirname(import.meta.filename!), "..", VERSION_TAG);
+
+const isCheck = process.argv.includes("--check");
 
 const { flowManifestSchema, skillManifestSchema, toolManifestSchema, providerManifestSchema } =
   createSchemas(MAJOR);
@@ -54,7 +58,11 @@ const entries = [
   },
 ];
 
-await mkdir(OUTPUT_DIR, { recursive: true });
+if (!isCheck) {
+  await mkdir(OUTPUT_DIR, { recursive: true });
+}
+
+let mismatch = false;
 
 for (const entry of entries) {
   const jsonSchema = toJSONSchema(entry.schema, {
@@ -72,9 +80,36 @@ for (const entry of entries) {
     ...jsonSchema,
   };
 
+  const generated = JSON.stringify(final, null, 2) + "\n";
   const filePath = resolve(OUTPUT_DIR, entry.filename);
-  await writeFile(filePath, JSON.stringify(final, null, 2) + "\n");
-  console.log(`  ✓ ${VERSION_TAG}/${entry.filename}`);
+
+  if (isCheck) {
+    let committed: string;
+    try {
+      committed = await readFile(filePath, "utf-8");
+    } catch {
+      console.error(`  ✗ ${VERSION_TAG}/${entry.filename} — file missing`);
+      mismatch = true;
+      continue;
+    }
+    if (committed !== generated) {
+      console.error(`  ✗ ${VERSION_TAG}/${entry.filename} — out of date`);
+      mismatch = true;
+    } else {
+      console.log(`  ✓ ${VERSION_TAG}/${entry.filename}`);
+    }
+  } else {
+    await writeFile(filePath, generated);
+    console.log(`  ✓ ${VERSION_TAG}/${entry.filename}`);
+  }
 }
 
-console.log(`\nGenerated ${entries.length} schemas in ${OUTPUT_DIR}`);
+if (isCheck) {
+  if (mismatch) {
+    console.error("\nJSON schemas are out of date. Run `bun run generate` to update.");
+    process.exit(1);
+  }
+  console.log("\nAll JSON schemas are up to date.");
+} else {
+  console.log(`\nGenerated ${entries.length} schemas in ${OUTPUT_DIR}`);
+}
