@@ -1,6 +1,6 @@
 {
   "name": "@afps-spec/schema",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "files": [
     "src",
@@ -17,9 +17,11 @@
     "test:conformance": "bun test tests/conformance.test.ts"
   },
   "dependencies": {
+    "semver": "^7.7.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/semver": "^7.7.1",
     "bun-types": "latest"
   }
 }

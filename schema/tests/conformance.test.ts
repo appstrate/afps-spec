@@ -122,6 +122,12 @@ describe("versioning (§2.3)", () => {
     expectValid(skillManifestSchema, { ...base, version: "10.20.30" });
   });
 
+  test("rejects invalid semver versions", () => {
+    expectInvalid(skillManifestSchema, { ...base, version: "not-a-version" });
+    expectInvalid(skillManifestSchema, { ...base, version: "1.0" });
+    expectInvalid(skillManifestSchema, { ...base, version: "1" });
+  });
+
   test("rejects empty version", () => {
     expectInvalid(skillManifestSchema, { ...base, version: "" });
   });
@@ -162,6 +168,28 @@ describe("package types (§2.1)", () => {
       version: "1.0.0",
       type: "flow",
       schemaVersion: "1.0",
+      author: "test",
+    });
+  });
+
+  test("flow author must be non-empty", () => {
+    expectInvalid(flowManifestSchema, {
+      name: "@test/flow",
+      version: "1.0.0",
+      type: "flow",
+      schemaVersion: "1.0",
+      displayName: "Test",
+      author: "",
+    });
+  });
+
+  test("flow displayName must be non-empty", () => {
+    expectInvalid(flowManifestSchema, {
+      name: "@test/flow",
+      version: "1.0.0",
+      type: "flow",
+      schemaVersion: "1.0",
+      displayName: "",
       author: "test",
     });
   });
@@ -297,6 +325,13 @@ describe("dependencies (§4)", () => {
       dependencies: { skills: { "bad-name": "^1.0.0" } },
     });
   });
+
+  test("dependency version must be a valid semver range", () => {
+    expectInvalid(flowManifestSchema, {
+      ...base,
+      dependencies: { skills: { "@acme/skill": "not-a-range!!!" } },
+    });
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -392,6 +427,85 @@ describe("schema system (§5)", () => {
     expectValid(flowManifestSchema, { ...base, config: schemaBlock });
   });
 
+  test("input without schema child is rejected", () => {
+    expectInvalid(flowManifestSchema, { ...base, input: {} });
+  });
+
+  test("output without schema child is rejected", () => {
+    expectInvalid(flowManifestSchema, { ...base, output: {} });
+  });
+
+  test("config without schema child is rejected", () => {
+    expectInvalid(flowManifestSchema, { ...base, config: {} });
+  });
+
+  test("format field is preserved on schema properties", () => {
+    const manifest = {
+      ...base,
+      input: {
+        schema: {
+          type: "object",
+          properties: {
+            email: { type: "string", format: "email" },
+          },
+        },
+      },
+    };
+    const result = flowManifestSchema.safeParse(manifest);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
+      const schema = input.schema as Record<string, unknown>;
+      const props = schema.properties as Record<string, Record<string, unknown>>;
+      expect(props.email.format).toBe("email");
+    }
+  });
+
+  test("placeholder field is preserved on schema properties", () => {
+    const manifest = {
+      ...base,
+      input: {
+        schema: {
+          type: "object",
+          properties: {
+            name: { type: "string", placeholder: "Enter your name..." },
+          },
+        },
+      },
+    };
+    const result = flowManifestSchema.safeParse(manifest);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
+      const schema = input.schema as Record<string, unknown>;
+      const props = schema.properties as Record<string, Record<string, unknown>>;
+      expect(props.name.placeholder).toBe("Enter your name...");
+    }
+  });
+
+  test("propertyOrder is preserved", () => {
+    const manifest = {
+      ...base,
+      input: {
+        schema: {
+          type: "object",
+          properties: {
+            b: { type: "string" },
+            a: { type: "number" },
+          },
+          propertyOrder: ["a", "b"],
+        },
+      },
+    };
+    const result = flowManifestSchema.safeParse(manifest);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
+      const schema = input.schema as Record<string, unknown>;
+      expect(schema.propertyOrder).toEqual(["a", "b"]);
+    }
+  });
+
   test("enum field support", () => {
     expectValid(flowManifestSchema, {
       ...base,
@@ -474,6 +588,124 @@ describe("provider authentication (§7)", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
       definition: { authMode: "invalid" },
+    });
+  });
+
+  // §7 — Conditional MUST rules per authMode
+  test("oauth2 — missing authorizationUrl rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "oauth2", tokenUrl: "https://example.com/token" },
+    });
+  });
+
+  test("oauth2 — missing tokenUrl rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "oauth2", authorizationUrl: "https://example.com/auth" },
+    });
+  });
+
+  test("oauth1 — missing requestTokenUrl rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "oauth1", accessTokenUrl: "https://example.com/access" },
+    });
+  });
+
+  test("oauth1 — missing accessTokenUrl rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "oauth1", requestTokenUrl: "https://example.com/request" },
+    });
+  });
+
+  test("api_key — missing credentialSchema rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "api_key" },
+    });
+  });
+
+  test("basic — missing credentialSchema rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "basic" },
+    });
+  });
+
+  test("custom — missing credentialSchema rejected", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "custom" },
+    });
+  });
+
+  // §7 — Optional provider definition fields
+
+  test("oauth2 optional fields accepted", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "oauth2",
+        authorizationUrl: "https://example.com/auth",
+        tokenUrl: "https://example.com/token",
+        refreshUrl: "https://example.com/refresh",
+        defaultScopes: ["read", "write"],
+        scopeSeparator: " ",
+        pkceEnabled: true,
+        tokenAuthMethod: "client_secret_post",
+        authorizationParams: { prompt: "consent" },
+        tokenParams: { grant_type: "authorization_code" },
+        credentialHeaderName: "Authorization",
+        credentialHeaderPrefix: "Bearer ",
+        authorizedUris: ["https://api.example.com/*"],
+        allowAllUris: false,
+        availableScopes: [{ value: "read", label: "Read access" }],
+      },
+    });
+  });
+
+  test("oauth1 optional fields accepted", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "oauth1",
+        requestTokenUrl: "https://example.com/request",
+        accessTokenUrl: "https://example.com/access",
+        authorizationUrl: "https://example.com/authorize",
+        defaultScopes: [],
+        credentialHeaderName: "Authorization",
+      },
+    });
+  });
+
+  test("api_key with full credential config accepted", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentialSchema: {
+          type: "object",
+          properties: { apiKey: { type: "string" } },
+        },
+        credentialFieldName: "api_key",
+        credentialHeaderName: "X-API-Key",
+        credentialHeaderPrefix: "",
+        authorizedUris: ["https://api.example.com/v1/*"],
+        allowAllUris: false,
+      },
+    });
+  });
+
+  test("allowAllUris: true accepted", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentialSchema: {},
+        allowAllUris: true,
+      },
     });
   });
 
@@ -614,6 +846,54 @@ describe("schemaVersion (§3.2)", () => {
 
   test("schemaVersion is required for flows", () => {
     expectInvalid(flowManifestSchema, { ...base });
+  });
+
+  test("schemaVersion is optional for skills", () => {
+    expectValid(skillManifestSchema, { name: "@test/skill", version: "1.0.0", type: "skill" });
+    expectValid(skillManifestSchema, {
+      name: "@test/skill",
+      version: "1.0.0",
+      type: "skill",
+      schemaVersion: "1.0",
+    });
+  });
+
+  test("schemaVersion is optional for tools", () => {
+    const toolBase = {
+      name: "@test/tool",
+      version: "1.0.0",
+      type: "tool",
+      entrypoint: "tool.ts",
+      tool: { name: "t", description: "D", inputSchema: {} },
+    };
+    expectValid(toolManifestSchema, toolBase);
+    expectValid(toolManifestSchema, { ...toolBase, schemaVersion: "1.0" });
+  });
+
+  test("schemaVersion is optional for providers", () => {
+    const provBase = {
+      name: "@test/prov",
+      version: "1.0.0",
+      type: "provider",
+      definition: { authMode: "api_key", credentialSchema: {} },
+    };
+    expectValid(providerManifestSchema, provBase);
+    expectValid(providerManifestSchema, { ...provBase, schemaVersion: "1.0" });
+  });
+
+  test("schemaVersion format enforced on non-flow types", () => {
+    expectInvalid(skillManifestSchema, {
+      name: "@test/skill",
+      version: "1.0.0",
+      type: "skill",
+      schemaVersion: "1.0.0",
+    });
+    expectInvalid(skillManifestSchema, {
+      name: "@test/skill",
+      version: "1.0.0",
+      type: "skill",
+      schemaVersion: "2.0",
+    });
   });
 
   test("invalid schemaVersion formats rejected", () => {

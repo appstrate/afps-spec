@@ -10,8 +10,7 @@
       "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
     },
     "version": {
-      "type": "string",
-      "minLength": 1
+      "type": "string"
     },
     "type": {
       "type": "string",
@@ -49,8 +48,7 @@
             "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
           },
           "additionalProperties": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           }
         },
         "tools": {
@@ -60,8 +58,7 @@
             "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
           },
           "additionalProperties": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           }
         },
         "providers": {
@@ -71,8 +68,7 @@
             "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
           },
           "additionalProperties": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           }
         }
       },

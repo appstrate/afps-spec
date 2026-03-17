@@ -11,4 +11,11 @@ export {
   skillManifestSchema,
   toolManifestSchema,
   providerManifestSchema,
+  // Shared sub-schemas — reusable by consumers
+  authModeEnum,
+  providerDefinition,
+  providerConfiguration,
+  setupGuide,
+  schemaProperty,
+  schemaObject,
 } from "./schemas.ts";
