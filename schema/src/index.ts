@@ -14,6 +14,9 @@ export {
   // Shared sub-schemas — reusable by consumers
   authModeEnum,
   providerDefinition,
+  oauth2Config,
+  oauth1Config,
+  credentialsConfig,
   providerConfiguration,
   setupGuide,
   schemaProperty,

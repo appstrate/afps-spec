@@ -164,7 +164,7 @@ See [spec.md, Section 3.4](./spec.md#34-tool-package) and
 
 ### Provider
 
-A provider is a service connector — it describes how to authenticate with an external service. It is manifest-only; there is no companion file. Providers declare an authentication mode (`oauth2`, `oauth1`, `api_key`, `basic`, or `custom`) and the metadata needed to establish a connection.
+A provider is a service connector — it describes how to authenticate with an external service. Providers declare an authentication mode (`oauth2`, `oauth1`, `api_key`, `basic`, or `custom`) and the metadata needed to establish a connection. Providers MAY include a `PROVIDER.md` companion file at the archive root containing concise API documentation optimized for agent consumption (key endpoints, request/response examples, common patterns).
 
 **Example** — an API key provider (`manifest.json`):
 
@@ -176,12 +176,14 @@ A provider is a service connector — it describes how to authenticate with an e
   "displayName": "OpenAI",
   "definition": {
     "authMode": "api_key",
-    "credentialSchema": {
-      "type": "object",
-      "properties": {
-        "apiKey": { "type": "string", "description": "API key" }
-      },
-      "required": ["apiKey"]
+    "credentials": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "apiKey": { "type": "string", "description": "API key" }
+        },
+        "required": ["apiKey"]
+      }
     },
     "credentialHeaderName": "Authorization",
     "credentialHeaderPrefix": "Bearer",
@@ -225,7 +227,7 @@ AFPS packages are distributed as ZIP files. Every archive must contain `manifest
 | flow      | `prompt.md` (non-empty)             |
 | skill     | `SKILL.md`                          |
 | tool      | Source file referenced by `entrypoint` |
-| provider  | None beyond `manifest.json`         |
+| provider  | Optional `PROVIDER.md`              |
 
 Package archives should use the `.afps` file extension (e.g., `customer-intake-1.0.0.afps`). The file is a standard ZIP — any ZIP tool can open it — but the `.afps` extension makes packages immediately recognizable and enables OS-level file association with AFPS-aware tooling.
 
@@ -335,13 +337,13 @@ Provider packages declare one of five authentication modes:
 
 | Mode     | Use case                                | Requires                        |
 |----------|-----------------------------------------|---------------------------------|
-| `oauth2` | Standard OAuth 2.0 services            | `authorizationUrl`, `tokenUrl`  |
-| `oauth1` | Legacy OAuth 1.0a services             | `requestTokenUrl`, `accessTokenUrl` |
-| `api_key` | API key-based services                 | `credentialSchema`              |
-| `basic`  | HTTP Basic authentication              | `credentialSchema`              |
-| `custom` | Non-standard authentication schemes    | `credentialSchema`              |
+| `oauth2` | Standard OAuth 2.0 services            | `oauth2` sub-object with `authorizationUrl`, `tokenUrl`  |
+| `oauth1` | Legacy OAuth 1.0a services             | `oauth1` sub-object with `requestTokenUrl`, `accessTokenUrl` |
+| `api_key` | API key-based services                 | `credentials` sub-object with `schema`              |
+| `basic`  | HTTP Basic authentication              | `credentials` sub-object with `schema`              |
+| `custom` | Non-standard authentication schemes    | `credentials` sub-object with `schema`              |
 
-OAuth2 providers can additionally declare PKCE support, custom scopes, token endpoint configuration, and authorized URI patterns.
+Each auth-mode sub-object is extensible — implementations MAY add fields for PKCE support, custom scopes, token endpoint configuration, and other implementation-specific settings. Transversal fields like `authorizedUris` and `allowAllUris` remain at the `definition` level.
 
 See [spec.md, Section 7](./spec.md#7-provider-authentication).
 

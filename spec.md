@@ -248,7 +248,7 @@ Every package archive MUST contain `manifest.json` at the archive root. Addition
 | `flow` | `prompt.md` at archive root, non-empty |
 | `skill` | `SKILL.md` at archive root; optional `scripts/`, `references/`, `assets/` directories (see §3.3) |
 | `tool` | source file referenced by manifest `entrypoint` |
-| `provider` | no companion file beyond `manifest.json` |
+| `provider` | optional `PROVIDER.md` at archive root |
 
 Producers SHOULD use the `.afps` file extension for package archives (e.g., `customer-intake-1.0.0.afps`). Consumers MUST accept archives regardless of file extension. The `.afps` extension is a convention for human recognition and tool association; it does not alter the archive format, which remains standard ZIP.
 
@@ -501,9 +501,9 @@ A provider package is manifest-only. It MUST contain a `definition` object descr
 #### `definition`
 - **Type**: object
 - **Required**: MUST for `provider`
-- **Format**: extensible object containing at least `authMode`
-- **Description**: Authentication and transport metadata for the provider.
-- **Example**: `{ "authMode": "oauth2", "authorizationUrl": "https://example.com/oauth/authorize", "tokenUrl": "https://example.com/oauth/token" }`
+- **Format**: extensible object containing at least `authMode` and an auth-mode-specific sub-object
+- **Description**: Authentication and transport metadata for the provider. The `authMode` field acts as a discriminant; depending on its value, one of the sub-objects `oauth2`, `oauth1`, or `credentials` MUST be present. Each sub-object is extensible (additional properties are allowed) so that implementations can carry mode-specific settings beyond those defined by AFPS. Transversal fields (`authorizedUris`, `allowAllUris`, `availableScopes`) remain at the `definition` level.
+- **Example**: `{ "authMode": "oauth2", "oauth2": { "authorizationUrl": "https://example.com/oauth/authorize", "tokenUrl": "https://example.com/oauth/token" } }`
 - **Default**: none
 
 #### `setupGuide`
@@ -513,6 +513,11 @@ A provider package is manifest-only. It MUST contain a `definition` object descr
 - **Description**: Human-facing setup instructions for configuring provider credentials.
 - **Example**: `{ "callbackUrlHint": "Set the redirect URI to {{callbackUrl}}", "steps": [{ "label": "Create an OAuth app" }] }`
 - **Default**: none
+
+#### `PROVIDER.md`
+- **Required**: MAY
+- **Format**: Markdown file at archive root
+- **Description**: Optional companion file providing API documentation for agent consumption. When present, consumers SHOULD make this file available to the agent at execution time. The file SHOULD contain concise API documentation optimized for language model consumption: key endpoints, request/response examples, common patterns, and important constraints. Producers SHOULD keep `PROVIDER.md` under 500 lines to support progressive disclosure — detailed reference material belongs in external documentation referenced by `docsUrl`.
 
 ## 4. Dependency Model
 
@@ -735,34 +740,31 @@ AFPS v1.0 does not impose a manifest-level default for this field. If a consumer
 
 ### 7.2 OAuth2 Configuration
 
-For `oauth2` providers:
+For `oauth2` providers, `definition.oauth2` MUST be present. The `oauth2` sub-object is extensible: implementations MAY add additional properties for implementation-specific OAuth2 settings.
 
-- `definition.authorizationUrl` MUST be present;
-- `definition.tokenUrl` MUST be present;
-- `definition.refreshUrl` MAY be present;
-- `definition.defaultScopes` MAY be present;
-- `definition.scopeSeparator` MAY be present;
-- `definition.pkceEnabled` MAY be present;
-- `definition.tokenAuthMethod` MAY be present;
-- `definition.authorizationParams` MAY be present; and
-- `definition.tokenParams` MAY be present.
+Required fields within `definition.oauth2`:
+
+- `definition.oauth2.authorizationUrl` MUST be present;
+- `definition.oauth2.tokenUrl` MUST be present.
 
 ### 7.3 OAuth1 Configuration
 
-For `oauth1` providers:
+For `oauth1` providers, `definition.oauth1` MUST be present. The `oauth1` sub-object is extensible: implementations MAY add additional properties for implementation-specific OAuth1 settings.
 
-- `definition.requestTokenUrl` MUST be present;
-- `definition.accessTokenUrl` MUST be present.
+Required fields within `definition.oauth1`:
+
+- `definition.oauth1.requestTokenUrl` MUST be present;
+- `definition.oauth1.accessTokenUrl` MUST be present.
 
 ### 7.4 Credential Schema
 
-For `api_key`, `basic`, and `custom` providers:
+For `api_key`, `basic`, and `custom` providers, `definition.credentials` MUST be present. The `credentials` sub-object is extensible: implementations MAY add additional properties for implementation-specific credential transmission settings.
 
-- `definition.credentialSchema` MUST be present.
+Required fields within `definition.credentials`:
 
-The `credentialSchema` object SHOULD follow the AFPS schema format defined in §5 (Schema System) — that is, `type: "object"` with a `properties` record — but the manifest validator accepts any JSON object. Each property defines a credential field the user must supply.
+- `definition.credentials.schema` MUST be present.
 
-The optional fields `credentialFieldName`, `credentialHeaderName`, and `credentialHeaderPrefix` MAY be used to describe how credentials are transmitted.
+The `schema` object SHOULD follow the AFPS schema format defined in §5 (Schema System) — that is, `type: "object"` with a `properties` record — but the manifest validator accepts any JSON object. Each property defines a credential field the user must supply.
 
 ### 7.5 URI Restrictions
 
@@ -934,25 +936,18 @@ When an extension field gains broad adoption across multiple implementations, it
 | `tool.inputSchema` | tool | object | MUST | JSON Schema for tool parameters | none |
 | `timeout` | flow | number | MAY | timeout hint in seconds | none |
 | `schemaVersion` | all manifests | string | MUST for flow; MAY for all others | `MAJOR.MINOR` format; producers MUST emit `1.0` for this draft | none |
-| `definition` | provider | object | MUST | extensible; contains auth metadata | none |
+| `definition` | provider | object | MUST | extensible; contains auth metadata and auth-mode-specific sub-object | none |
 | `definition.authMode` | provider | string | MUST | `oauth2\|oauth1\|api_key\|basic\|custom` | none |
-| `definition.authorizationUrl` | provider | string | MUST for oauth2 | URI recommended | none |
-| `definition.tokenUrl` | provider | string | MUST for oauth2 | URI recommended | none |
-| `definition.refreshUrl` | provider | string | MAY | URI recommended | consumer-defined |
-| `definition.defaultScopes` | provider | string[] | MAY | default requested scopes | consumer-defined |
-| `definition.scopeSeparator` | provider | string | MAY | OAuth scope separator | consumer-defined |
-| `definition.pkceEnabled` | provider | boolean | MAY | PKCE flag | consumer-defined |
-| `definition.tokenAuthMethod` | provider | string | MAY | token endpoint auth hint | none |
-| `definition.authorizationParams` | provider | object | MAY | free-form parameter map | consumer-defined |
-| `definition.tokenParams` | provider | object | MAY | free-form parameter map | consumer-defined |
-| `definition.credentialSchema` | provider | object | MUST for `api_key`, `basic`, `custom` | SHOULD follow AFPS schema format; validator accepts any object | none |
-| `definition.credentialFieldName` | provider | string | MAY | logical credential field | none |
-| `definition.credentialHeaderName` | provider | string | MAY | HTTP header name | none |
-| `definition.credentialHeaderPrefix` | provider | string | MAY | HTTP header prefix | none |
+| `definition.oauth2` | provider | object | MUST for oauth2 | extensible sub-object for OAuth2 configuration | none |
+| `definition.oauth2.authorizationUrl` | provider | string | MUST for oauth2 | URI recommended | none |
+| `definition.oauth2.tokenUrl` | provider | string | MUST for oauth2 | URI recommended | none |
+| `definition.oauth1` | provider | object | MUST for oauth1 | extensible sub-object for OAuth1 configuration | none |
+| `definition.oauth1.requestTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
+| `definition.oauth1.accessTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
+| `definition.credentials` | provider | object | MUST for `api_key`, `basic`, `custom` | extensible sub-object for credential configuration | none |
+| `definition.credentials.schema` | provider | object | MUST for `api_key`, `basic`, `custom` | SHOULD follow AFPS schema format; validator accepts any object | none |
 | `definition.authorizedUris` | provider | string[] | MAY | allowed upstream URI patterns | none |
 | `definition.allowAllUris` | provider | boolean | MAY | unrestricted upstream access | consumer-defined |
-| `definition.requestTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
-| `definition.accessTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
 | `definition.availableScopes` | provider | array | MAY | interoperable form is `{ value, label }[]` | none |
 | `iconUrl` | provider | string | MAY | URI recommended | none |
 | `categories` | provider | string[] | MAY | arbitrary strings | consumer-defined |
@@ -962,6 +957,7 @@ When an extension field gains broad adoption across multiple implementations, it
 | `setupGuide.steps` | provider | object[] | MAY | ordered setup steps | none |
 | `setupGuide.steps[].label` | provider | string | MUST if step present | non-empty recommended | none |
 | `setupGuide.steps[].url` | provider | string | MAY | URI recommended | none |
+| `PROVIDER.md` | provider archive | file | MAY | optional API documentation for agent consumption | none |
 | `SKILL.md` frontmatter `name` | skill content | string | SHOULD | max 64 chars, lowercase alphanumeric and hyphens | none |
 | `SKILL.md` frontmatter `description` | skill content | string | SHOULD | max 1024 chars; missing value warns | none |
 | `SKILL.md` frontmatter `license` | skill content | string | MAY | license name or file reference | none |
@@ -994,11 +990,6 @@ Common consumer-side defaults observed in interoperable implementations include:
 | Field | Resolved default | Notes |
 | --- | --- | --- |
 | `definition.authMode` | `oauth2` | provider resolution default when absent in raw extraction |
-| `definition.defaultScopes` | `[]` | resolved provider definition |
-| `definition.scopeSeparator` | `" "` | resolved provider definition |
-| `definition.pkceEnabled` | `true` | resolved provider definition |
-| `definition.authorizationParams` | `{}` | resolved provider definition |
-| `definition.tokenParams` | `{}` | resolved provider definition |
 | `definition.allowAllUris` | `false` | resolved provider definition |
 | `categories` | `[]` | resolved provider definition |
 | `providersConfiguration.<id>.connectionMode` | `user` | common consumer default |

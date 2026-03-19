@@ -225,7 +225,7 @@ describe("package types (§2.1)", () => {
       name: "@test/provider",
       version: "1.0.0",
       type: "provider",
-      definition: { authMode: "api_key", credentialSchema: {} },
+      definition: { authMode: "api_key", credentials: { schema: {} } },
     });
 
     // Missing definition
@@ -558,29 +558,33 @@ describe("provider authentication (§7)", () => {
       ...base,
       definition: {
         authMode: "oauth2",
-        authorizationUrl: "https://example.com/auth",
-        tokenUrl: "https://example.com/token",
+        oauth2: {
+          authorizationUrl: "https://example.com/auth",
+          tokenUrl: "https://example.com/token",
+        },
       },
     });
     expectValid(providerManifestSchema, {
       ...base,
       definition: {
         authMode: "oauth1",
-        requestTokenUrl: "https://example.com/request",
-        accessTokenUrl: "https://example.com/access",
+        oauth1: {
+          requestTokenUrl: "https://example.com/request",
+          accessTokenUrl: "https://example.com/access",
+        },
       },
     });
     expectValid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "api_key", credentialSchema: {} },
+      definition: { authMode: "api_key", credentials: { schema: {} } },
     });
     expectValid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "basic", credentialSchema: {} },
+      definition: { authMode: "basic", credentials: { schema: {} } },
     });
     expectValid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "custom", credentialSchema: {} },
+      definition: { authMode: "custom", credentials: { schema: {} } },
     });
   });
 
@@ -595,46 +599,54 @@ describe("provider authentication (§7)", () => {
   test("oauth2 — missing authorizationUrl rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "oauth2", tokenUrl: "https://example.com/token" },
+      definition: { authMode: "oauth2", oauth2: { tokenUrl: "https://example.com/token" } },
+    });
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "oauth2" },
     });
   });
 
   test("oauth2 — missing tokenUrl rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "oauth2", authorizationUrl: "https://example.com/auth" },
+      definition: { authMode: "oauth2", oauth2: { authorizationUrl: "https://example.com/auth" } },
     });
   });
 
   test("oauth1 — missing requestTokenUrl rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "oauth1", accessTokenUrl: "https://example.com/access" },
+      definition: { authMode: "oauth1", oauth1: { accessTokenUrl: "https://example.com/access" } },
+    });
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "oauth1" },
     });
   });
 
   test("oauth1 — missing accessTokenUrl rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "oauth1", requestTokenUrl: "https://example.com/request" },
+      definition: { authMode: "oauth1", oauth1: { requestTokenUrl: "https://example.com/request" } },
     });
   });
 
-  test("api_key — missing credentialSchema rejected", () => {
+  test("api_key — missing credentials rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
       definition: { authMode: "api_key" },
     });
   });
 
-  test("basic — missing credentialSchema rejected", () => {
+  test("basic — missing credentials rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
       definition: { authMode: "basic" },
     });
   });
 
-  test("custom — missing credentialSchema rejected", () => {
+  test("custom — missing credentials rejected", () => {
     expectInvalid(providerManifestSchema, {
       ...base,
       definition: { authMode: "custom" },
@@ -648,15 +660,17 @@ describe("provider authentication (§7)", () => {
       ...base,
       definition: {
         authMode: "oauth2",
-        authorizationUrl: "https://example.com/auth",
-        tokenUrl: "https://example.com/token",
-        refreshUrl: "https://example.com/refresh",
-        defaultScopes: ["read", "write"],
-        scopeSeparator: " ",
-        pkceEnabled: true,
-        tokenAuthMethod: "client_secret_post",
-        authorizationParams: { prompt: "consent" },
-        tokenParams: { grant_type: "authorization_code" },
+        oauth2: {
+          authorizationUrl: "https://example.com/auth",
+          tokenUrl: "https://example.com/token",
+          refreshUrl: "https://example.com/refresh",
+          defaultScopes: ["read", "write"],
+          scopeSeparator: " ",
+          pkceEnabled: true,
+          tokenAuthMethod: "client_secret_post",
+          authorizationParams: { prompt: "consent" },
+          tokenParams: { grant_type: "authorization_code" },
+        },
         credentialHeaderName: "Authorization",
         credentialHeaderPrefix: "Bearer ",
         authorizedUris: ["https://api.example.com/*"],
@@ -671,10 +685,12 @@ describe("provider authentication (§7)", () => {
       ...base,
       definition: {
         authMode: "oauth1",
-        requestTokenUrl: "https://example.com/request",
-        accessTokenUrl: "https://example.com/access",
-        authorizationUrl: "https://example.com/authorize",
-        defaultScopes: [],
+        oauth1: {
+          requestTokenUrl: "https://example.com/request",
+          accessTokenUrl: "https://example.com/access",
+          authorizationUrl: "https://example.com/authorize",
+          defaultScopes: [],
+        },
         credentialHeaderName: "Authorization",
       },
     });
@@ -685,11 +701,13 @@ describe("provider authentication (§7)", () => {
       ...base,
       definition: {
         authMode: "api_key",
-        credentialSchema: {
-          type: "object",
-          properties: { apiKey: { type: "string" } },
+        credentials: {
+          schema: {
+            type: "object",
+            properties: { apiKey: { type: "string" } },
+          },
+          fieldName: "api_key",
         },
-        credentialFieldName: "api_key",
         credentialHeaderName: "X-API-Key",
         credentialHeaderPrefix: "",
         authorizedUris: ["https://api.example.com/v1/*"],
@@ -703,7 +721,7 @@ describe("provider authentication (§7)", () => {
       ...base,
       definition: {
         authMode: "api_key",
-        credentialSchema: {},
+        credentials: { schema: {} },
         allowAllUris: true,
       },
     });
@@ -717,14 +735,14 @@ describe("provider authentication (§7)", () => {
       iconUrl: "https://example.com/icon.svg",
       categories: ["email", "productivity"],
       docsUrl: "https://example.com/docs",
-      definition: { authMode: "api_key", credentialSchema: {} },
+      definition: { authMode: "api_key", credentials: { schema: {} } },
     });
   });
 
   test("setupGuide with steps", () => {
     expectValid(providerManifestSchema, {
       ...base,
-      definition: { authMode: "api_key", credentialSchema: {} },
+      definition: { authMode: "api_key", credentials: { schema: {} } },
       setupGuide: {
         callbackUrlHint: "Set redirect URI to: {{callbackUrl}}",
         steps: [
@@ -875,7 +893,7 @@ describe("schemaVersion (§3.2)", () => {
       name: "@test/prov",
       version: "1.0.0",
       type: "provider",
-      definition: { authMode: "api_key", credentialSchema: {} },
+      definition: { authMode: "api_key", credentials: { schema: {} } },
     };
     expectValid(providerManifestSchema, provBase);
     expectValid(providerManifestSchema, { ...provBase, schemaVersion: "1.0" });

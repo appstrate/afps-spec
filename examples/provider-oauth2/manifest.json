@@ -10,19 +10,21 @@
   "docsUrl": "https://developers.google.com/workspace/gmail/api",
   "definition": {
     "authMode": "oauth2",
-    "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
-    "tokenUrl": "https://oauth2.googleapis.com/token",
-    "refreshUrl": "https://oauth2.googleapis.com/token",
-    "defaultScopes": [
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.send"
-    ],
-    "scopeSeparator": " ",
-    "pkceEnabled": false,
-    "tokenAuthMethod": "client_secret_post",
-    "authorizationParams": {
-      "access_type": "offline",
-      "prompt": "consent"
+    "oauth2": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "refreshUrl": "https://oauth2.googleapis.com/token",
+      "defaultScopes": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.send"
+      ],
+      "scopeSeparator": " ",
+      "pkceEnabled": false,
+      "tokenAuthMethod": "client_secret_post",
+      "authorizationParams": {
+        "access_type": "offline",
+        "prompt": "consent"
+      }
     },
     "credentialHeaderName": "Authorization",
     "credentialHeaderPrefix": "Bearer",

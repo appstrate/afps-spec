@@ -99,23 +99,28 @@ const toolInterface = z.object({
 
 export const authModeEnum = z.enum(["oauth2", "oauth1", "api_key", "basic", "custom"]);
 
+/** OAuth2 configuration sub-object. Required fields per §7.2; extensible for implementation-specific fields. */
+export const oauth2Config = z.looseObject({
+  authorizationUrl: z.string(),
+  tokenUrl: z.string(),
+});
+
+/** OAuth1 configuration sub-object. Required fields per §7.3; extensible for implementation-specific fields. */
+export const oauth1Config = z.looseObject({
+  requestTokenUrl: z.string(),
+  accessTokenUrl: z.string(),
+});
+
+/** Credential configuration sub-object. Required fields per §7.4; extensible for implementation-specific fields. */
+export const credentialsConfig = z.looseObject({
+  schema: z.record(z.string(), z.unknown()),
+});
+
 export const providerDefinition = z.looseObject({
   authMode: authModeEnum,
-  authorizationUrl: z.string().optional(),
-  tokenUrl: z.string().optional(),
-  refreshUrl: z.string().optional(),
-  defaultScopes: z.array(z.string()).optional(),
-  scopeSeparator: z.string().optional(),
-  pkceEnabled: z.boolean().optional(),
-  tokenAuthMethod: z.string().optional(),
-  authorizationParams: z.record(z.string(), z.unknown()).optional(),
-  tokenParams: z.record(z.string(), z.unknown()).optional(),
-  requestTokenUrl: z.string().optional(),
-  accessTokenUrl: z.string().optional(),
-  credentialSchema: z.record(z.string(), z.unknown()).optional(),
-  credentialFieldName: z.string().optional(),
-  credentialHeaderName: z.string().optional(),
-  credentialHeaderPrefix: z.string().optional(),
+  oauth2: oauth2Config.optional(),
+  oauth1: oauth1Config.optional(),
+  credentials: credentialsConfig.optional(),
   authorizedUris: z.array(z.string()).optional(),
   allowAllUris: z.boolean().optional(),
   availableScopes: z.array(z.unknown()).optional(),
@@ -197,41 +202,63 @@ export function createSchemas(majorVersion: number) {
     .superRefine((val, ctx) => {
       const mode = val.definition?.authMode;
       if (mode === "oauth2") {
-        if (!val.definition.authorizationUrl) {
+        if (!val.definition.oauth2) {
           ctx.addIssue({
             code: "custom",
-            path: ["definition", "authorizationUrl"],
-            message: "Required for oauth2 authMode",
+            path: ["definition", "oauth2"],
+            message: "oauth2 configuration object is required for oauth2 authMode",
           });
-        }
-        if (!val.definition.tokenUrl) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["definition", "tokenUrl"],
-            message: "Required for oauth2 authMode",
-          });
+        } else {
+          if (!val.definition.oauth2.authorizationUrl) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["definition", "oauth2", "authorizationUrl"],
+              message: "Required for oauth2 authMode",
+            });
+          }
+          if (!val.definition.oauth2.tokenUrl) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["definition", "oauth2", "tokenUrl"],
+              message: "Required for oauth2 authMode",
+            });
+          }
         }
       } else if (mode === "oauth1") {
-        if (!val.definition.requestTokenUrl) {
+        if (!val.definition.oauth1) {
           ctx.addIssue({
             code: "custom",
-            path: ["definition", "requestTokenUrl"],
-            message: "Required for oauth1 authMode",
+            path: ["definition", "oauth1"],
+            message: "oauth1 configuration object is required for oauth1 authMode",
           });
-        }
-        if (!val.definition.accessTokenUrl) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["definition", "accessTokenUrl"],
-            message: "Required for oauth1 authMode",
-          });
+        } else {
+          if (!val.definition.oauth1.requestTokenUrl) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["definition", "oauth1", "requestTokenUrl"],
+              message: "Required for oauth1 authMode",
+            });
+          }
+          if (!val.definition.oauth1.accessTokenUrl) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["definition", "oauth1", "accessTokenUrl"],
+              message: "Required for oauth1 authMode",
+            });
+          }
         }
       } else if (mode === "api_key" || mode === "basic" || mode === "custom") {
-        if (!val.definition.credentialSchema) {
+        if (!val.definition.credentials) {
           ctx.addIssue({
             code: "custom",
-            path: ["definition", "credentialSchema"],
-            message: `Required for ${mode} authMode`,
+            path: ["definition", "credentials"],
+            message: `credentials configuration object is required for ${mode} authMode`,
+          });
+        } else if (!val.definition.credentials.schema) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["definition", "credentials", "schema"],
+            message: `credentials.schema is required for ${mode} authMode`,
           });
         }
       }

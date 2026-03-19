@@ -10,17 +10,19 @@
   "docsUrl": "https://platform.openai.com/docs/api-reference",
   "definition": {
     "authMode": "api_key",
-    "credentialSchema": {
-      "type": "object",
-      "properties": {
-        "apiKey": {
-          "type": "string",
-          "description": "OpenAI API key"
-        }
+    "credentials": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "description": "OpenAI API key"
+          }
+        },
+        "required": ["apiKey"]
       },
-      "required": ["apiKey"]
+      "fieldName": "apiKey"
     },
-    "credentialFieldName": "apiKey",
     "credentialHeaderName": "Authorization",
     "credentialHeaderPrefix": "Bearer",
     "authorizedUris": [

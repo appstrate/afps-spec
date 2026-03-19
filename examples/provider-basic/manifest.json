@@ -8,19 +8,21 @@
   "categories": ["internal", "api"],
   "definition": {
     "authMode": "basic",
-    "credentialSchema": {
-      "type": "object",
-      "properties": {
-        "username": {
-          "type": "string",
-          "description": "API username"
+    "credentials": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "API username"
+          },
+          "password": {
+            "type": "string",
+            "description": "API password"
+          }
         },
-        "password": {
-          "type": "string",
-          "description": "API password"
-        }
-      },
-      "required": ["username", "password"]
+        "required": ["username", "password"]
+      }
     },
     "credentialHeaderName": "Authorization",
     "credentialHeaderPrefix": "Basic",

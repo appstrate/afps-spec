@@ -99,65 +99,53 @@
             "custom"
           ]
         },
-        "authorizationUrl": {
-          "type": "string"
-        },
-        "tokenUrl": {
-          "type": "string"
-        },
-        "refreshUrl": {
-          "type": "string"
-        },
-        "defaultScopes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "scopeSeparator": {
-          "type": "string"
-        },
-        "pkceEnabled": {
-          "type": "boolean"
-        },
-        "tokenAuthMethod": {
-          "type": "string"
-        },
-        "authorizationParams": {
+        "oauth2": {
           "type": "object",
-          "propertyNames": {
-            "type": "string"
+          "properties": {
+            "authorizationUrl": {
+              "type": "string"
+            },
+            "tokenUrl": {
+              "type": "string"
+            }
           },
+          "required": [
+            "authorizationUrl",
+            "tokenUrl"
+          ],
           "additionalProperties": {}
         },
-        "tokenParams": {
+        "oauth1": {
           "type": "object",
-          "propertyNames": {
-            "type": "string"
+          "properties": {
+            "requestTokenUrl": {
+              "type": "string"
+            },
+            "accessTokenUrl": {
+              "type": "string"
+            }
           },
+          "required": [
+            "requestTokenUrl",
+            "accessTokenUrl"
+          ],
           "additionalProperties": {}
         },
-        "requestTokenUrl": {
-          "type": "string"
-        },
-        "accessTokenUrl": {
-          "type": "string"
-        },
-        "credentialSchema": {
+        "credentials": {
           "type": "object",
-          "propertyNames": {
-            "type": "string"
+          "properties": {
+            "schema": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
           },
+          "required": [
+            "schema"
+          ],
           "additionalProperties": {}
-        },
-        "credentialFieldName": {
-          "type": "string"
-        },
-        "credentialHeaderName": {
-          "type": "string"
-        },
-        "credentialHeaderPrefix": {
-          "type": "string"
         },
         "authorizedUris": {
           "type": "array",
