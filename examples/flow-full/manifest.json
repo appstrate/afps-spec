@@ -121,7 +121,6 @@
     }
   },
   "execution": {
-    "timeout": 300,
-    "outputRetries": 2
+    "timeout": 300
   }
 }
