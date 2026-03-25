@@ -247,7 +247,7 @@ Every package archive MUST contain `manifest.json` at the archive root. Addition
 | --- | --- |
 | `flow` | `prompt.md` at archive root, non-empty |
 | `skill` | `SKILL.md` at archive root; optional `scripts/`, `references/`, `assets/` directories (see §3.3) |
-| `tool` | source file referenced by manifest `entrypoint` |
+| `tool` | source file referenced by manifest `entrypoint`; optional `TOOL.md` |
 | `provider` | optional `PROVIDER.md` at archive root |
 
 Producers SHOULD use the `.afps` file extension for package archives (e.g., `customer-intake-1.0.0.afps`). Consumers MUST accept archives regardless of file extension. The `.afps` extension is a convention for human recognition and tool association; it does not alter the archive format, which remains standard ZIP.
@@ -493,6 +493,11 @@ A tool package MUST contain `manifest.json` at the archive root and an implement
 `entrypoint` MUST NOT contain path traversal segments (`..`). Producers SHOULD reference a file at the archive root.
 
 AFPS does not define how consumers load or execute the source file. A consumer MAY import it as a module, spawn it as a subprocess, compile it, or use any other strategy. The `tool` object in the manifest provides sufficient metadata for tool discovery and invocation without executing the source code.
+
+#### `TOOL.md`
+- **Required**: MAY
+- **Format**: Markdown file at archive root
+- **Description**: Optional companion file providing usage documentation for agent consumption. When present, consumers SHOULD make this file available to the agent at execution time (e.g., injected into the system prompt or accessible via the workspace filesystem). The file SHOULD contain concise instructions optimized for language model consumption: when and how to use the tool, expected behavior, important constraints, and examples. Producers SHOULD keep `TOOL.md` under 200 lines. The manifest `tool.description` field provides a short summary for tool discovery; `TOOL.md` provides extended guidance for tool usage.
 
 ### 3.5 Provider Package
 
@@ -957,6 +962,7 @@ When an extension field gains broad adoption across multiple implementations, it
 | `setupGuide.steps` | provider | object[] | MAY | ordered setup steps | none |
 | `setupGuide.steps[].label` | provider | string | MUST if step present | non-empty recommended | none |
 | `setupGuide.steps[].url` | provider | string | MAY | URI recommended | none |
+| `TOOL.md` | tool archive | file | MAY | optional usage documentation for agent consumption | none |
 | `PROVIDER.md` | provider archive | file | MAY | optional API documentation for agent consumption | none |
 | `SKILL.md` frontmatter `name` | skill content | string | SHOULD | max 64 chars, lowercase alphanumeric and hyphens | none |
 | `SKILL.md` frontmatter `description` | skill content | string | SHOULD | max 1024 chars; missing value warns | none |
