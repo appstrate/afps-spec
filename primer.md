@@ -298,8 +298,7 @@ The schema format is intentionally smaller than JSON Schema. Every schema must b
       "properties": {
         "query": {
           "type": "string",
-          "description": "Search query",
-          "placeholder": "label:inbox newer_than:7d"
+          "description": "Search query"
         },
         "max_results": {
           "type": "number",
@@ -307,6 +306,9 @@ The schema format is intentionally smaller than JSON Schema. Every schema must b
         }
       },
       "required": ["query"]
+    },
+    "uiHints": {
+      "query": { "placeholder": "label:inbox newer_than:7d" }
     }
   },
   "config": {

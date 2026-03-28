@@ -132,7 +132,5 @@
       "metadata"
     ]
   },
-  "execution": {
-    "timeout": 300
-  }
+  "timeout": 300
 }
