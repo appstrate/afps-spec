@@ -355,23 +355,27 @@ describe("schema system (§5)", () => {
         schema: {
           type: "object",
           properties: {
-            text: { type: "string", description: "A text field", placeholder: "Enter..." },
+            text: { type: "string", description: "A text field" },
             count: { type: "number", description: "A number", default: 10 },
             enabled: { type: "boolean", description: "Toggle" },
             tags: { type: "array", description: "Tags list" },
             meta: { type: "object", description: "Metadata" },
             doc: {
-              type: "file",
+              type: "array",
               description: "Upload",
-              accept: ".pdf,.docx",
-              maxSize: 10485760,
-              multiple: true,
-              maxFiles: 5,
+              items: { type: "string", format: "uri", contentMediaType: "application/octet-stream" },
+              maxItems: 5,
             },
           },
           required: ["text"],
-          propertyOrder: ["text", "count", "enabled", "tags", "meta", "doc"],
         },
+        fileConstraints: {
+          doc: { accept: ".pdf,.docx", maxSize: 10485760 },
+        },
+        uiHints: {
+          text: { placeholder: "Enter..." },
+        },
+        propertyOrder: ["text", "count", "enabled", "tags", "meta", "doc"],
       },
     });
   });
@@ -461,15 +465,18 @@ describe("schema system (§5)", () => {
     }
   });
 
-  test("placeholder field is preserved on schema properties", () => {
+  test("uiHints placeholder is preserved on wrapper", () => {
     const manifest = {
       ...base,
       input: {
         schema: {
           type: "object",
           properties: {
-            name: { type: "string", placeholder: "Enter your name..." },
+            name: { type: "string" },
           },
+        },
+        uiHints: {
+          name: { placeholder: "Enter your name..." },
         },
       },
     };
@@ -477,13 +484,12 @@ describe("schema system (§5)", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
-      const schema = input.schema as Record<string, unknown>;
-      const props = schema.properties as Record<string, Record<string, unknown>>;
-      expect(props.name.placeholder).toBe("Enter your name...");
+      const hints = input.uiHints as Record<string, Record<string, unknown>>;
+      expect(hints.name.placeholder).toBe("Enter your name...");
     }
   });
 
-  test("propertyOrder is preserved", () => {
+  test("propertyOrder is preserved on wrapper", () => {
     const manifest = {
       ...base,
       input: {
@@ -493,16 +499,15 @@ describe("schema system (§5)", () => {
             b: { type: "string" },
             a: { type: "number" },
           },
-          propertyOrder: ["a", "b"],
         },
+        propertyOrder: ["a", "b"],
       },
     };
     const result = flowManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
-      const schema = input.schema as Record<string, unknown>;
-      expect(schema.propertyOrder).toEqual(["a", "b"]);
+      expect(input.propertyOrder).toEqual(["a", "b"]);
     }
   });
 

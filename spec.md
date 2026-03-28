@@ -48,7 +48,7 @@ This draft is published for community review and early implementation feedback. 
   - [4.4 Provider Configuration](#44-provider-configuration)
 - [5. Schema System](#5-schema-system)
   - [5.1 JSON Schema Properties](#51-json-schema-properties)
-  - [5.2 File Type Extensions](#52-file-type-extensions)
+  - [5.2 File Field Convention](#52-file-field-convention)
   - [5.3 Schema Object Structure](#53-schema-object-structure)
   - [5.4 Input, Output, and Config Schemas](#54-input-output-and-config-schemas)
 - [6. Execution Model](#6-execution-model)
@@ -584,11 +584,13 @@ AFPS uses a constrained JSON-object schema model rather than the full JSON Schem
 
 ### 5.1 JSON Schema Properties
 
+All property definitions within an AFPS schema MUST be valid JSON Schema 2020-12. AFPS uses a constrained subset of the vocabulary:
+
 #### `type`
 - **Type**: string
 - **Required**: MUST
-- **Format**: one of `string`, `number`, `boolean`, `array`, `object`, `file`
-- **Description**: Declares the field kind.
+- **Format**: one of `string`, `number`, `boolean`, `array`, `object`
+- **Description**: Declares the field kind. All values are standard JSON Schema types.
 - **Example**: `string`
 - **Default**: none
 
@@ -620,51 +622,67 @@ AFPS uses a constrained JSON-object schema model rather than the full JSON Schem
 - **Type**: string
 - **Required**: MAY
 - **Format**: free text
-- **Description**: Optional formatting hint such as `date-time`.
-- **Example**: `date-time`
+- **Description**: Optional formatting hint such as `date-time`, `email`, or `uri`.
+- **Example**: `uri`
 - **Default**: none
 
-#### `placeholder`
+#### `contentMediaType`
 - **Type**: string
 - **Required**: MAY
-- **Format**: free text
-- **Description**: UI hint shown before the user provides a value.
-- **Example**: `label:inbox newer_than:7d`
+- **Format**: IANA media type (RFC 2046)
+- **Description**: Declares the media type of the content the field represents. Used in conjunction with `format: "uri"` to indicate file fields (see §5.2).
+- **Example**: `application/octet-stream`
 - **Default**: none
 
-### 5.2 File Type Extensions
-
-#### `accept`
-- **Type**: string
-- **Required**: MAY
-- **Format**: free text, often file extensions or MIME-like selectors
-- **Description**: Hint for accepted file formats when `type` is `file`.
-- **Example**: `.pdf,.docx`
+#### `items`
+- **Type**: object
+- **Required**: MAY (used when `type` is `array`)
+- **Format**: a JSON Schema property definition
+- **Description**: Describes the items within an array field.
+- **Example**: `{ "type": "string", "format": "uri", "contentMediaType": "application/octet-stream" }`
 - **Default**: none
 
-#### `maxSize`
-- **Type**: number
-- **Required**: MAY
-- **Format**: positive number, in bytes
-- **Description**: Maximum accepted file size for a single file, expressed in bytes.
-- **Example**: `10485760` (10 MB)
-- **Default**: none
-
-#### `multiple`
-- **Type**: boolean
-- **Required**: MAY
-- **Format**: boolean
-- **Description**: Indicates whether multiple files are allowed.
-- **Example**: `true`
-- **Default**: none
-
-#### `maxFiles`
-- **Type**: number
-- **Required**: MAY
+#### `maxItems`
+- **Type**: integer
+- **Required**: MAY (used when `type` is `array`)
 - **Format**: positive integer
-- **Description**: Maximum number of files when `multiple` is enabled.
+- **Description**: Maximum number of items in an array.
 - **Example**: `5`
 - **Default**: none
+
+### 5.2 File Field Convention
+
+AFPS represents file upload fields using standard JSON Schema types rather than a custom `file` type. A consumer detects a file field by the combination of `format: "uri"` and the presence of `contentMediaType`.
+
+**Single file:**
+
+```json
+{
+  "type": "string",
+  "format": "uri",
+  "contentMediaType": "application/octet-stream",
+  "description": "Upload a document"
+}
+```
+
+**Multiple files:**
+
+```json
+{
+  "type": "array",
+  "items": {
+    "type": "string",
+    "format": "uri",
+    "contentMediaType": "application/octet-stream"
+  },
+  "maxItems": 5,
+  "description": "Upload supporting documents"
+}
+```
+
+At runtime, the field value is a URI reference to the uploaded file. The `contentMediaType` value MAY be `application/octet-stream` (any file type) or a more specific media type such as `application/pdf`.
+
+Upload constraints such as accepted file extensions and maximum file size are not JSON Schema concerns. They are declared in the `fileConstraints` section of the schema wrapper (see §5.4).
 
 ### 5.3 Schema Object Structure
 
@@ -675,27 +693,52 @@ An AFPS schema container MUST have:
 
 It MAY also contain:
 
-- `required`: an array of property names;
-- `propertyOrder`: an array of property names used as a presentation hint. Listed properties SHOULD be rendered first, in the given order. Properties present in `properties` but absent from `propertyOrder` SHOULD be appended after the listed ones, in their natural object-key order.
+- `required`: an array of property names.
 
-AFPS v1.0 does not define nested property schemas, array item schemas, or full JSON Schema composition keywords. Properties with `type: "object"` or `type: "array"` are therefore shallow hints unless a consumer defines additional behavior.
+AFPS v1.0 uses a constrained subset of JSON Schema. Properties with `type: "object"` or `type: "array"` use standard `items` and `maxItems` keywords where applicable. Full JSON Schema composition keywords (`allOf`, `anyOf`, `oneOf`, `$ref`) are not part of the AFPS subset.
 
 Because the schema validator is extensible, consumers SHOULD preserve unknown property keywords that they do not understand.
 
 ### 5.4 Input, Output, and Config Schemas
 
-`input`, `output`, and `config` all use the same wrapper shape:
+`input`, `output`, and `config` all use a wrapper shape containing a required `schema` member and optional AFPS metadata:
 
 ```json
 {
   "schema": {
     "type": "object",
     "properties": {}
-  }
+  },
+  "fileConstraints": {},
+  "uiHints": {},
+  "propertyOrder": []
 }
 ```
 
+The `schema` member MUST be a valid JSON Schema 2020-12 object. The remaining fields are AFPS-specific metadata that lives outside the schema to preserve JSON Schema purity.
+
 The wrapper object is required when any of these sections are present. A bare schema object is not valid in those locations.
+
+#### `fileConstraints`
+- **Type**: object (keyed by property name)
+- **Required**: MAY
+- **Description**: Upload constraints for file fields. Each entry MAY contain:
+  - `accept` (string): comma-separated file extensions or MIME-type selectors (e.g., `.pdf,.docx`).
+  - `maxSize` (number): maximum accepted file size in bytes for a single file.
+- **Example**: `{ "attachments": { "accept": ".pdf,.docx", "maxSize": 10485760 } }`
+
+#### `uiHints`
+- **Type**: object (keyed by property name)
+- **Required**: MAY
+- **Description**: UI rendering hints for schema fields. Each entry MAY contain:
+  - `placeholder` (string): hint text shown before the user provides a value.
+- **Example**: `{ "query": { "placeholder": "label:inbox newer_than:7d" } }`
+
+#### `propertyOrder`
+- **Type**: array of strings
+- **Required**: MAY
+- **Description**: Presentation hint for property ordering. Listed properties SHOULD be rendered first, in the given order. Properties present in `properties` but absent from `propertyOrder` SHOULD be appended after the listed ones, in their natural object-key order.
+- **Example**: `["query", "attachments", "priority"]`
 
 Although the three sections share the same structural format, they have distinct semantics and lifecycles:
 

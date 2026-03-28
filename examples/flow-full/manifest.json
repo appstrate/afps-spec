@@ -33,16 +33,17 @@
       "properties": {
         "inbox_query": {
           "type": "string",
-          "description": "Gmail search query",
-          "placeholder": "label:inbox newer_than:7d"
+          "description": "Gmail search query"
         },
         "attachments": {
-          "type": "file",
+          "type": "array",
           "description": "Optional supporting files",
-          "accept": ".pdf,.docx",
-          "maxSize": 10485760,
-          "multiple": true,
-          "maxFiles": 5
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "contentMediaType": "application/octet-stream"
+          },
+          "maxItems": 5
         },
         "priority": {
           "type": "string",
@@ -51,9 +52,20 @@
           "enum": ["low", "normal", "high"]
         }
       },
-      "required": ["inbox_query"],
-      "propertyOrder": ["inbox_query", "attachments", "priority"]
-    }
+      "required": ["inbox_query"]
+    },
+    "fileConstraints": {
+      "attachments": {
+        "accept": ".pdf,.docx",
+        "maxSize": 10485760
+      }
+    },
+    "uiHints": {
+      "inbox_query": {
+        "placeholder": "label:inbox newer_than:7d"
+      }
+    },
+    "propertyOrder": ["inbox_query", "attachments", "priority"]
   },
   "output": {
     "schema": {
@@ -76,9 +88,9 @@
           "description": "Labels applied to the request"
         }
       },
-      "required": ["summary", "ticket_count", "needs_follow_up"],
-      "propertyOrder": ["summary", "ticket_count", "needs_follow_up", "labels"]
-    }
+      "required": ["summary", "ticket_count", "needs_follow_up"]
+    },
+    "propertyOrder": ["summary", "ticket_count", "needs_follow_up", "labels"]
   },
   "config": {
     "schema": {
@@ -110,15 +122,15 @@
           "description": "Arbitrary metadata object"
         }
       },
-      "required": ["team_name"],
-      "propertyOrder": [
-        "team_name",
-        "language",
-        "max_messages",
-        "emit_debug",
-        "metadata"
-      ]
-    }
+      "required": ["team_name"]
+    },
+    "propertyOrder": [
+      "team_name",
+      "language",
+      "max_messages",
+      "emit_debug",
+      "metadata"
+    ]
   },
   "execution": {
     "timeout": 300

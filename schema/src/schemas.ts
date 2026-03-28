@@ -36,7 +36,14 @@ const semverRange = z.string().refine((v) => semver.validRange(v) !== null, {
 // Schema system (§5)
 // ─────────────────────────────────────────────
 
-const fieldTypeEnum = z.enum(["string", "number", "boolean", "array", "object", "file"]);
+const fieldTypeEnum = z.enum(["string", "number", "boolean", "array", "object"]);
+
+const schemaPropertyItems = z.looseObject({
+  type: fieldTypeEnum,
+  description: z.string().optional(),
+  format: z.string().optional(),
+  contentMediaType: z.string().optional(),
+});
 
 export const schemaProperty = z.looseObject({
   type: fieldTypeEnum,
@@ -44,22 +51,31 @@ export const schemaProperty = z.looseObject({
   default: z.unknown().optional(),
   enum: z.array(z.unknown()).optional(),
   format: z.string().optional(),
-  placeholder: z.string().optional(),
-  accept: z.string().optional(),
-  maxSize: z.number().positive().optional(),
-  multiple: z.boolean().optional(),
-  maxFiles: z.number().int().positive().optional(),
+  contentMediaType: z.string().optional(),
+  items: schemaPropertyItems.optional(),
+  maxItems: z.number().int().positive().optional(),
 });
 
 export const schemaObject = z.looseObject({
   type: z.literal("object"),
   properties: z.record(z.string(), schemaProperty),
   required: z.array(z.string()).optional(),
-  propertyOrder: z.array(z.string()).optional(),
+});
+
+const fileConstraint = z.looseObject({
+  accept: z.string().optional(),
+  maxSize: z.number().positive().optional(),
+});
+
+const uiHint = z.looseObject({
+  placeholder: z.string().optional(),
 });
 
 const schemaWrapper = z.object({
   schema: schemaObject,
+  fileConstraints: z.record(z.string(), fileConstraint).optional(),
+  uiHints: z.record(z.string(), uiHint).optional(),
+  propertyOrder: z.array(z.string()).optional(),
 });
 
 // ─────────────────────────────────────────────
