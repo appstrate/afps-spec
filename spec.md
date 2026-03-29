@@ -358,8 +358,8 @@ Flow manifests extend the common fields above. A conforming flow manifest MUST i
 - **Type**: object
 - **Required**: MAY
 - **Format**: map keyed by provider package id
-- **Description**: Per-provider runtime configuration such as scopes and connection mode.
-- **Example**: `{ "@example/gmail": { "scopes": ["gmail.readonly"], "connectionMode": "admin" } }`
+- **Description**: Per-provider runtime configuration such as scopes.
+- **Example**: `{ "@example/gmail": { "scopes": ["gmail.readonly"] } }`
 - **Default**: none
 
 #### `input`
@@ -573,10 +573,7 @@ A package MUST NOT declare a dependency on itself. Consumers SHOULD detect circu
 
 `providersConfiguration` is keyed by provider package id. The interoperable keys defined in AFPS v1.0 are:
 
-- `scopes`: array of strings;
-- `connectionMode`: `user` or `admin`.
-
-If `connectionMode` is omitted, many consumers treat it as `user`, but no manifest-level default is injected by validation.
+- `scopes`: array of strings.
 
 ## 5. Schema System
 
@@ -970,7 +967,6 @@ When an extension field gains broad adoption across multiple implementations, it
 | `author` | flow | string | MUST | free text | none |
 | `providersConfiguration` | flow | map | MAY | keyed by provider id | none |
 | `providersConfiguration.<id>.scopes` | flow | string[] | MAY | requested scopes | none |
-| `providersConfiguration.<id>.connectionMode` | flow | string | MAY | `user\|admin` | consumer-defined |
 | `input` | flow | object | MAY | per-execution data; requires `schema` child | none |
 | `input.schema` | flow | object | MUST if `input` present | AFPS schema object | none |
 | `output` | flow | object | MAY | per-execution result; requires `schema` child | none |
@@ -1041,7 +1037,6 @@ Common consumer-side defaults observed in interoperable implementations include:
 | `definition.authMode` | `oauth2` | provider resolution default when absent in raw extraction |
 | `definition.allowAllUris` | `false` | resolved provider definition |
 | `categories` | `[]` | resolved provider definition |
-| `providersConfiguration.<id>.connectionMode` | `user` | common consumer default |
 | `schemaVersion` | `1.0` | common consumer default for new flows |
 | `timeout` | `300` | common consumer default for new flows |
 

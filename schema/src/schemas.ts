@@ -96,7 +96,6 @@ const dependenciesSchema = z
 
 export const providerConfiguration = z.looseObject({
   scopes: z.array(z.string()).optional(),
-  connectionMode: z.enum(["user", "admin"]).optional(),
 });
 
 // ─────────────────────────────────────────────

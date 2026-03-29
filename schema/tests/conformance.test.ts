@@ -780,29 +780,11 @@ describe("providersConfiguration (§4.4)", () => {
       providersConfiguration: {
         "@acme/gmail": {
           scopes: ["gmail.readonly", "gmail.send"],
-          connectionMode: "admin",
         },
       },
     });
   });
 
-  test("connectionMode values: user and admin", () => {
-    expectValid(flowManifestSchema, {
-      ...base,
-      providersConfiguration: { "@acme/gmail": { connectionMode: "user" } },
-    });
-    expectValid(flowManifestSchema, {
-      ...base,
-      providersConfiguration: { "@acme/gmail": { connectionMode: "admin" } },
-    });
-  });
-
-  test("invalid connectionMode rejected", () => {
-    expectInvalid(flowManifestSchema, {
-      ...base,
-      providersConfiguration: { "@acme/gmail": { connectionMode: "invalid" } },
-    });
-  });
 });
 
 // ─────────────────────────────────────────────

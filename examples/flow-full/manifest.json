@@ -23,8 +23,7 @@
   },
   "providersConfiguration": {
     "@example/gmail": {
-      "scopes": ["gmail.readonly", "gmail.send"],
-      "connectionMode": "admin"
+      "scopes": ["gmail.readonly", "gmail.send"]
     }
   },
   "input": {
