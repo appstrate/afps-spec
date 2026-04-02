@@ -284,9 +284,9 @@ See [spec.md, Section 4.1](./spec.md#41-dependency-declaration).
 
 AFPS defines a simplified schema system for three distinct sections in an agent manifest. Although they share the same format, they serve different purposes:
 
-- **`input`** — per-execution data, supplied each time the agent runs (e.g., a search query, a file to process). Consumers should prompt for these values at each execution.
-- **`output`** — per-execution result, produced at the end of each run (e.g., a summary, a report). Consumers may use this to validate the language model's response.
-- **`config`** — per-deployment settings, configured once and reused across executions (e.g., preferred language, notification threshold). Consumers should persist these values.
+- **`input`** — per-run data, supplied each time the agent runs (e.g., a search query, a file to process). Consumers should prompt for these values at each run.
+- **`output`** — per-run result, produced at the end of each run (e.g., a summary, a report). Consumers may use this to validate the language model's response.
+- **`config`** — per-deployment settings, configured once and reused across runs (e.g., preferred language, notification threshold). Consumers should persist these values.
 
 The schema format is intentionally smaller than JSON Schema. Every schema must be an object with `type: "object"` and a `properties` map:
 

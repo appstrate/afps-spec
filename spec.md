@@ -366,7 +366,7 @@ Agent manifests extend the common fields above. A conforming agent manifest MUST
 - **Type**: object
 - **Required**: MAY
 - **Format**: wrapper object containing a required `schema` member
-- **Description**: Describes per-execution input — data that a user or caller supplies each time the agent runs. A consumer SHOULD prompt for input values at execution time. Typical examples include a search query, a file to process, or a message to analyze.
+- **Description**: Describes per-run input — data that a user or caller supplies each time the agent runs. A consumer SHOULD prompt for input values at run time. Typical examples include a search query, a file to process, or a message to analyze.
 - **Example**: `{ "schema": { "type": "object", "properties": { "query": { "type": "string" } } } }`
 - **Default**: none
 
@@ -374,7 +374,7 @@ Agent manifests extend the common fields above. A conforming agent manifest MUST
 - **Type**: object
 - **Required**: MAY
 - **Format**: wrapper object containing a required `schema` member
-- **Description**: Describes the structured result that the agent produces at the end of each execution. A consumer MAY use this schema to validate or parse the language model's response.
+- **Description**: Describes the structured result that the agent produces at the end of each run. A consumer MAY use this schema to validate or parse the language model's response.
 - **Example**: `{ "schema": { "type": "object", "properties": { "summary": { "type": "string" } } } }`
 - **Default**: none
 
@@ -382,7 +382,7 @@ Agent manifests extend the common fields above. A conforming agent manifest MUST
 - **Type**: object
 - **Required**: MAY
 - **Format**: wrapper object containing a required `schema` member
-- **Description**: Describes agent configuration — settings that are defined once during setup and remain constant across executions. A consumer SHOULD persist config values and reuse them without prompting on each run. Typical examples include a preferred language, a target folder, or a notification threshold. Config values MAY have `default` values in the schema.
+- **Description**: Describes agent configuration — settings that are defined once during setup and remain constant across runs. A consumer SHOULD persist config values and reuse them without prompting on each run. Typical examples include a preferred language, a target folder, or a notification threshold. Config values MAY have `default` values in the schema.
 - **Example**: `{ "schema": { "type": "object", "properties": { "language": { "type": "string", "default": "fr" } } } }`
 - **Default**: none
 
@@ -497,7 +497,7 @@ AFPS does not define how consumers load or execute the source file. A consumer M
 #### `TOOL.md`
 - **Required**: MAY
 - **Format**: Markdown file at archive root
-- **Description**: Optional companion file providing usage documentation for agent consumption. When present, consumers SHOULD make this file available to the agent at execution time (e.g., injected into the system prompt or accessible via the workspace filesystem). The file SHOULD contain concise instructions optimized for language model consumption: when and how to use the tool, expected behavior, important constraints, and examples. Producers SHOULD keep `TOOL.md` under 200 lines. The manifest `tool.description` field provides a short summary for tool discovery; `TOOL.md` provides extended guidance for tool usage.
+- **Description**: Optional companion file providing usage documentation for agent consumption. When present, consumers SHOULD make this file available to the agent at run time (e.g., injected into the system prompt or accessible via the workspace filesystem). The file SHOULD contain concise instructions optimized for language model consumption: when and how to use the tool, expected behavior, important constraints, and examples. Producers SHOULD keep `TOOL.md` under 200 lines. The manifest `tool.description` field provides a short summary for tool discovery; `TOOL.md` provides extended guidance for tool usage.
 
 ### 3.5 Provider Package
 
@@ -522,7 +522,7 @@ A provider package is manifest-only. It MUST contain a `definition` object descr
 #### `PROVIDER.md`
 - **Required**: MAY
 - **Format**: Markdown file at archive root
-- **Description**: Optional companion file providing API documentation for agent consumption. When present, consumers SHOULD make this file available to the agent at execution time. The file SHOULD contain concise API documentation optimized for language model consumption: key endpoints, request/response examples, common patterns, and important constraints. Producers SHOULD keep `PROVIDER.md` under 500 lines to support progressive disclosure — detailed reference material belongs in external documentation referenced by `docsUrl`.
+- **Description**: Optional companion file providing API documentation for agent consumption. When present, consumers SHOULD make this file available to the agent at run time. The file SHOULD contain concise API documentation optimized for language model consumption: key endpoints, request/response examples, common patterns, and important constraints. Producers SHOULD keep `PROVIDER.md` under 500 lines to support progressive disclosure — detailed reference material belongs in external documentation referenced by `docsUrl`.
 
 ## 4. Dependency Model
 
@@ -741,11 +741,11 @@ Although the three sections share the same structural format, they have distinct
 
 | Section | Lifecycle | Timing | Description |
 | --- | --- | --- | --- |
-| `input` | Per-execution | Supplied each time the agent runs | Data the user provides for a specific run (e.g., a search query, a file to process). |
-| `output` | Per-execution | Produced at the end of each run | Structured result the agent returns (e.g., a summary, a report). |
-| `config` | Per-deployment | Set once during setup, reused across runs | Settings that remain constant across executions (e.g., preferred language, notification threshold). |
+| `input` | Per-run | Supplied each time the agent runs | Data the user provides for a specific run (e.g., a search query, a file to process). |
+| `output` | Per-run | Produced at the end of each run | Structured result the agent returns (e.g., a summary, a report). |
+| `config` | Per-deployment | Set once during setup, reused across runs | Settings that remain constant across runs (e.g., preferred language, notification threshold). |
 
-A consumer SHOULD prompt for `input` values at each execution and SHOULD persist `config` values so they do not need to be re-entered.
+A consumer SHOULD prompt for `input` values at each run and SHOULD persist `config` values so they do not need to be re-entered.
 
 ## 6. Execution Model
 
@@ -967,9 +967,9 @@ When an extension field gains broad adoption across multiple implementations, it
 | `author` | agent | string | MUST | free text | none |
 | `providersConfiguration` | agent | map | MAY | keyed by provider id | none |
 | `providersConfiguration.<id>.scopes` | agent | string[] | MAY | requested scopes | none |
-| `input` | agent | object | MAY | per-execution data; requires `schema` child | none |
+| `input` | agent | object | MAY | per-run data; requires `schema` child | none |
 | `input.schema` | agent | object | MUST if `input` present | AFPS schema object | none |
-| `output` | agent | object | MAY | per-execution result; requires `schema` child | none |
+| `output` | agent | object | MAY | per-run result; requires `schema` child | none |
 | `output.schema` | agent | object | MUST if `output` present | AFPS schema object | none |
 | `config` | agent | object | MAY | per-deployment settings; requires `schema` child | none |
 | `config.schema` | agent | object | MUST if `config` present | AFPS schema object | none |
