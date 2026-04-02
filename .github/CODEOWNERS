@@ -1,0 +1,14 @@
+# AFPS Specification — Code Owners
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default — editor reviews all changes
+* @appstrate/afps-editors
+
+# Normative specification
+spec.md @appstrate/afps-editors
+
+# Schemas and validation tooling
+schema/ @appstrate/afps-editors
+
+# Examples
+examples/ @appstrate/afps-editors

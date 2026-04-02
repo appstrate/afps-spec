@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC-BY-4.0
+// Copyright (c) 2026 Appstrate contributors
+
 /**
  * Generate AFPS JSON Schema files from the Zod definitions.
  *
@@ -75,6 +78,7 @@ for (const entry of entries) {
   const final = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: `${BASE_URL}/${VERSION_TAG}/${entry.filename}`,
+    $comment: "SPDX-License-Identifier: CC-BY-4.0 — Copyright (c) 2026 Appstrate contributors",
     title: entry.title,
     description: entry.description,
     ...jsonSchema,

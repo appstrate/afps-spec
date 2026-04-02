@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC-BY-4.0
+// Copyright (c) 2026 Appstrate contributors
+
 /**
  * AFPS — Zod schemas for the four package types.
  *

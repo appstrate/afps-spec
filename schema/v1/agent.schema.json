@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
+  "$comment": "SPDX-License-Identifier: CC-BY-4.0 — Copyright (c) 2026 Appstrate contributors",
   "title": "AFPS Agent Manifest",
   "description": "Manifest schema for AFPS agent packages. An agent declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
   "type": "object",
