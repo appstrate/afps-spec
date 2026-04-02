@@ -1,8 +1,8 @@
 {
-  "$schema": "https://afps.appstrate.dev/schema/v1/flow.schema.json",
+  "$schema": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
   "name": "@example/customer-intake",
   "version": "1.2.0",
-  "type": "flow",
+  "type": "agent",
   "schemaVersion": "1.0",
   "displayName": "Customer Intake Assistant",
   "description": "Collects inbound requests and prepares a structured summary.",

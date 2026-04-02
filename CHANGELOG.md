@@ -1,8 +1,27 @@
 # Changelog
 
+## v1.0.1 — 2026-04-01
+
+### Renamed
+
+- **Package type `flow` renamed to `agent`** — the `"type": "flow"` value in manifests is now `"type": "agent"`. This better reflects the package's role as an autonomous agent definition. All schema files, examples, and spec text updated accordingly.
+- **"Agent Flow Packaging Standard" renamed to "Agent Format Packaging Standard"** — the AFPS acronym is unchanged.
+
+### Schema
+
+- `schema/v1/flow.schema.json` replaced by `schema/v1/agent.schema.json`
+- `flowManifestSchema` renamed to `agentManifestSchema` in Zod source
+
+### Examples
+
+- `examples/flow-full/` renamed to `examples/agent-full/`
+- `examples/flow-minimal/` renamed to `examples/agent-minimal/`
+
+---
+
 ## v1.0 — 2026-03-15
 
-Initial release of the Agent Flow Packaging Standard (AFPS) v1.0.
+Initial release of the Agent Format Packaging Standard (AFPS) v1.0.
 
 ### Specification
 
@@ -13,7 +32,7 @@ Initial release of the Agent Flow Packaging Standard (AFPS) v1.0.
 
 ### Package Types
 
-- `flow` — complete workflow with `prompt.md`, dependencies, input/output/config schemas, timeout
+- `agent` — complete workflow with `prompt.md`, dependencies, input/output/config schemas, timeout
 - `skill` — reusable instructions (`SKILL.md`), superset of Agent Skills format
 - `tool` — single callable capability with `entrypoint` and `tool` interface declaration
 - `provider` — service connector with auth mode, OAuth endpoints, credential schema

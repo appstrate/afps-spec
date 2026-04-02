@@ -5,7 +5,7 @@ The normative specification is [spec.md](./spec.md).
 
 ## What is AFPS?
 
-Agent Flow Packaging Standard (AFPS) is an open specification for declaring portable AI workflow packages. Think of it as a packaging standard: it defines how to describe, version, and distribute the building blocks of AI workflows.
+Agent Format Packaging Standard (AFPS) is an open specification for declaring portable AI workflow packages. Think of it as a packaging standard: it defines how to describe, version, and distribute the building blocks of AI workflows.
 
 AFPS answers a specific question: **what is this AI workflow package, and what does it need?** It does not define how agents call tools, how agents talk to each other, or how a runtime executes prompts. Those concerns belong to other specifications.
 
@@ -14,13 +14,13 @@ AFPS answers a specific question: **what is this AI workflow package, and what d
 The key distinction is between **goals** and **capabilities**:
 
 - A **skill** tells the agent *how to do something* — it is a reusable capability ("rewrite text in a professional tone").
-- A **flow** tells the agent *what to accomplish* — it is the user's intent, packaged ("process my inbox and create a summary of support requests").
+- An **agent** tells the agent *what to accomplish* — it is the user's intent, packaged ("process my inbox and create a summary of support requests").
 
 Agent Skills (Anthropic / AAIF) and MCP Tools define capabilities. AFPS defines the goal layer that composes those capabilities into a complete, portable workflow:
 
 ```text
                 ┌───────────────────────────────┐
-  Goal          │  AFPS Flow                    │  The user's intent, packaged.
+  Goal          │  AFPS Agent                   │  The user's intent, packaged.
                 │  prompt.md + manifest.json    │  "What should the agent accomplish?"
                 ├───────────────────────────────┤
   Capability    │  AFPS Skills / Tools          │  Reusable abilities the agent
@@ -34,7 +34,7 @@ Agent Skills (Anthropic / AAIF) and MCP Tools define capabilities. AFPS defines 
                 └───────────────────────────────┘
 ```
 
-A flow's `prompt.md` replaces what a human would type to give an agent its objective. The flow manifest declares which skills, tools, and providers the agent needs to fulfill that objective. AFPS packages everything together into a versioned, distributable `.afps` artifact (a standard ZIP file).
+An agent's `prompt.md` replaces what a human would type to give an agent its objective. The agent manifest declares which skills, tools, and providers the agent needs to fulfill that objective. AFPS packages everything together into a versioned, distributable `.afps` artifact (a standard ZIP file).
 
 MCP standardizes how an agent invokes tools at runtime. A2A standardizes how agents discover and communicate with each other. Agent Skills standardize reusable capability descriptions. AFPS standardizes the goal and its dependencies — the package that gets published, installed, and composed before any of that happens. The four are complementary.
 
@@ -44,13 +44,13 @@ AFPS is transport-agnostic: it does not prescribe how packages are fetched, tran
 
 AFPS defines exactly four package types. Each one serves a distinct role.
 
-### Flow
+### Agent
 
-A flow is a complete AI workflow — the primary unit of execution. It represents the user's intent: a manifest describing what the workflow needs, paired with a `prompt.md` file containing the objective sent to a language model.
+An agent is a complete AI workflow — the primary unit of execution. It represents the user's intent: a manifest describing what the workflow needs, paired with a `prompt.md` file containing the objective sent to a language model.
 
-A flow execution is **non-interactive and run-to-completion**: the agent receives the objective, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the flow runs from start to finish without user interaction.
+An agent execution is **non-interactive and run-to-completion**: the agent receives the objective, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the agent runs from start to finish without user interaction.
 
-Think of it like a `docker-compose.yml` for AI agents — it declares the goal, the dependencies, the inputs, the outputs, the configuration, and execution hints, all in one portable artifact. Where a skill says "I know how to rewrite text professionally", a flow says "process these emails and create a summary" — and lists the skills, tools, and providers needed to do it.
+Think of it like a `docker-compose.yml` for AI agents — it declares the goal, the dependencies, the inputs, the outputs, the configuration, and execution hints, all in one portable artifact. Where a skill says "I know how to rewrite text professionally", an agent says "process these emails and create a summary" — and lists the skills, tools, and providers needed to do it.
 
 **Minimal example** (`manifest.json`):
 
@@ -58,7 +58,7 @@ Think of it like a `docker-compose.yml` for AI agents — it declares the goal, 
 {
   "name": "@acme/customer-intake",
   "version": "1.0.0",
-  "type": "flow",
+  "type": "agent",
   "schemaVersion": "1.0",
   "displayName": "Customer Intake",
   "author": "Acme Corp",
@@ -76,11 +76,11 @@ The companion `prompt.md` contains the actual instructions:
 Read the latest unread emails from the connected Gmail account and produce a structured summary of support requests, grouped by priority.
 ```
 
-See [spec.md, Section 3.2](./spec.md#32-flow-manifest) for the full field reference.
+See [spec.md, Section 3.2](./spec.md#32-agent-manifest) for the full field reference.
 
 ### Skill
 
-A skill is a declarative capability — a reusable instruction set that a flow can reference. AFPS skill packages are a **superset of the [Agent Skills](https://agentskills.io/) format**: a valid Agent Skill directory becomes a valid AFPS skill package when you add a `manifest.json`. The `SKILL.md` format, all frontmatter fields, and optional directories (`scripts/`, `references/`, `assets/`) are preserved unchanged. AFPS adds identity, versioning, and dependency resolution on top.
+A skill is a declarative capability — a reusable instruction set that an agent can reference. AFPS skill packages are a **superset of the [Agent Skills](https://agentskills.io/) format**: a valid Agent Skill directory becomes a valid AFPS skill package when you add a `manifest.json`. The `SKILL.md` format, all frontmatter fields, and optional directories (`scripts/`, `references/`, `assets/`) are preserved unchanged. AFPS adds identity, versioning, and dependency resolution on top.
 
 ```text
 rewrite-tone/
@@ -123,7 +123,7 @@ See [spec.md, Section 3.3](./spec.md#33-skill-package) for details.
 
 ### Tool
 
-A tool is a callable capability — executable code that an agent can invoke during flow execution. It consists of a manifest declaring the tool interface and an implementation source file. Where a skill provides instructions (declarative), a tool provides code (executable).
+A tool is a callable capability — executable code that an agent can invoke during agent execution. It consists of a manifest declaring the tool interface and an implementation source file. Where a skill provides instructions (declarative), a tool provides code (executable).
 
 ```text
 @acme/fetch-json.afps
@@ -204,9 +204,9 @@ Every AFPS package has a scoped name of the form `@scope/name`. Both segments ar
 ```text
 @acme/customer-intake    valid
 @my-org/gmail            valid
-@Acme/Flow               invalid (uppercase)
-@acme/my_flow            invalid (underscore)
-acme/flow                invalid (missing @)
+@Acme/Agent              invalid (uppercase)
+@acme/my_agent           invalid (underscore)
+acme/agent               invalid (missing @)
 ```
 
 Scopes let registries enforce ownership: only authorized publishers can release packages within a scope.
@@ -224,7 +224,7 @@ AFPS packages are distributed as ZIP files. Every archive must contain `manifest
 
 | Type      | Required companion files            |
 |-----------|-------------------------------------|
-| flow      | `prompt.md` (non-empty)             |
+| agent     | `prompt.md` (non-empty)             |
 | skill     | `SKILL.md`                          |
 | tool      | Source file referenced by `entrypoint` |
 | provider  | Optional `PROVIDER.md`              |
@@ -236,12 +236,12 @@ See [spec.md, Section 2.5](./spec.md#25-package-archive-format).
 
 ### Dependencies
 
-A flow composes skills, tools, and providers as dependencies. The following diagram shows a typical flow and the packages it depends on:
+An agent composes skills, tools, and providers as dependencies. The following diagram shows a typical agent and the packages it depends on:
 
 ```text
                   ┌──────────────────────────────────┐
                   │  @acme/customer-intake           │
-                  │  type: flow                      │
+                  │  type: agent                     │
                   │                                  │
                   │  prompt.md    = the objective    │
                   │  input/output = structured data  │
@@ -262,9 +262,9 @@ A flow composes skills, tools, and providers as dependencies. The following diag
                      professionally"  from a URL"
 ```
 
-The flow says *what to accomplish*. The dependencies provide *how* — reusable capabilities and service connections the agent draws on at runtime.
+The agent says *what to accomplish*. The dependencies provide *how* — reusable capabilities and service connections the agent draws on at runtime.
 
-All package types use a single `dependencies` field to declare the packages they depend on. Values are semver ranges. A registry resolves and installs these packages when the parent package is published or imported; a runtime loads them when the flow executes.
+All package types use a single `dependencies` field to declare the packages they depend on. Values are semver ranges. A registry resolves and installs these packages when the parent package is published or imported; a runtime loads them when the agent executes.
 
 ```json
 {
@@ -282,9 +282,9 @@ See [spec.md, Section 4.1](./spec.md#41-dependency-declaration).
 
 ### Constrained schema system
 
-AFPS defines a simplified schema system for three distinct sections in a flow manifest. Although they share the same format, they serve different purposes:
+AFPS defines a simplified schema system for three distinct sections in an agent manifest. Although they share the same format, they serve different purposes:
 
-- **`input`** — per-execution data, supplied each time the flow runs (e.g., a search query, a file to process). Consumers should prompt for these values at each execution.
+- **`input`** — per-execution data, supplied each time the agent runs (e.g., a search query, a file to process). Consumers should prompt for these values at each execution.
 - **`output`** — per-execution result, produced at the end of each run (e.g., a summary, a report). Consumers may use this to validate the language model's response.
 - **`config`** — per-deployment settings, configured once and reused across executions (e.g., preferred language, notification threshold). Consumers should persist these values.
 
@@ -355,8 +355,8 @@ AFPS manifests are extensible. Unknown fields are preserved by consumers rather 
 
 ```json
 {
-  "name": "@acme/my-flow",
-  "type": "flow",
+  "name": "@acme/my-agent",
+  "type": "agent",
   "x-internal-team": "platform",
   "x-cost-center": "eng-42"
 }
@@ -372,9 +372,9 @@ To set clear expectations, here is what AFPS intentionally does not cover:
 
 - **Not an agent-to-agent transport.** AFPS does not define how agents discover or communicate with each other. That is the domain of protocols like A2A.
 
-- **Not a prompt language.** AFPS requires a `prompt.md` file in flow packages, but it does not define prompt templating, variable interpolation, or execution semantics.
+- **Not a prompt language.** AFPS requires a `prompt.md` file in agent packages, but it does not define prompt templating, variable interpolation, or execution semantics.
 
-- **Not a runtime API.** AFPS does not specify how a flow runner loads packages, manages state, or handles scheduling. Those are implementation concerns.
+- **Not a runtime API.** AFPS does not specify how an agent runner loads packages, manages state, or handles scheduling. Those are implementation concerns.
 
 - **Not a registry protocol.** AFPS defines what packages look like and how dependencies are declared, but it does not define the HTTP API for publishing, searching, or downloading packages.
 

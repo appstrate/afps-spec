@@ -7,9 +7,9 @@ Machine-readable representation of the AFPS specification. The specification tex
 This directory is published as `@afps/schema` on npm. Implementations can import the Zod schemas and extend them:
 
 ```typescript
-import { flowManifestSchema } from "@afps/schema";
+import { agentManifestSchema } from "@afps/schema";
 
-const myFlowSchema = flowManifestSchema.extend({
+const myAgentSchema = agentManifestSchema.extend({
   "x-custom-field": z.string().optional(),
 });
 ```
@@ -21,7 +21,7 @@ Schemas are organized by major version:
 ```
 schema/
 ├── v1/                   ← AFPS v1.x schemas
-│   ├── flow.schema.json
+│   ├── agent.schema.json
 │   ├── skill.schema.json
 │   ├── tool.schema.json
 │   └── provider.schema.json
@@ -48,11 +48,11 @@ Reference a schema using `$schema` for editor validation:
 
 ```json
 {
-  "$schema": "https://afps.appstrate.dev/schema/v1/flow.schema.json",
+  "$schema": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
   "schemaVersion": "1.0",
-  "name": "@scope/my-flow",
+  "name": "@scope/my-agent",
   "version": "1.0.0",
-  "type": "flow"
+  "type": "agent"
 }
 ```
 

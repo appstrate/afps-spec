@@ -1,6 +1,6 @@
 # Contributing to AFPS
 
-Thank you for your interest in contributing to the Agent Flow Packaging Standard specification. This document explains how to participate effectively.
+Thank you for your interest in contributing to the Agent Format Packaging Standard specification. This document explains how to participate effectively.
 
 ## Reporting Issues
 

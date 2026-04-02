@@ -1,0 +1,10 @@
+{
+  "$schema": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
+  "name": "@example/minimal-agent",
+  "version": "1.0.0",
+  "type": "agent",
+  "schemaVersion": "1.0",
+  "displayName": "Minimal Agent",
+  "author": "AFPS Examples",
+  "dependencies": {}
+}

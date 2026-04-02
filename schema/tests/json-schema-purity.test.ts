@@ -9,7 +9,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { flowManifestSchema } from "../src/index.ts";
+import { agentManifestSchema } from "../src/index.ts";
 
 // --- Standard JSON Schema 2020-12 keywords (property-level) ---
 
@@ -113,17 +113,17 @@ function assertNoKeywordInObject(obj: unknown, keyword: string, path: string): s
 // --- Tests ---
 
 describe("JSON Schema purity — generated schemas", () => {
-  const flowSchemaPath = join(import.meta.dir, "../v1/flow.schema.json");
-  const flowSchema = JSON.parse(readFileSync(flowSchemaPath, "utf-8"));
+  const agentSchemaPath = join(import.meta.dir, "../v1/agent.schema.json");
+  const agentSchema = JSON.parse(readFileSync(agentSchemaPath, "utf-8"));
 
-  test("flow.schema.json uses JSON Schema 2020-12 dialect", () => {
-    expect(flowSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+  test("agent.schema.json uses JSON Schema 2020-12 dialect", () => {
+    expect(agentSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
   });
 
   test("schema property definitions contain only standard JSON Schema keywords", () => {
     // Navigate to the property schema within the input wrapper
     const propDef =
-      flowSchema.properties?.input?.properties?.schema?.properties?.properties
+      agentSchema.properties?.input?.properties?.schema?.properties?.properties
         ?.additionalProperties?.properties;
     expect(propDef).toBeDefined();
 
@@ -137,7 +137,7 @@ describe("JSON Schema purity — generated schemas", () => {
 
   test("type enum does not include 'file'", () => {
     const typeEnum =
-      flowSchema.properties?.input?.properties?.schema?.properties?.properties
+      agentSchema.properties?.input?.properties?.schema?.properties?.properties
         ?.additionalProperties?.properties?.type?.enum;
     expect(typeEnum).toBeDefined();
     expect(typeEnum).not.toContain("file");
@@ -146,7 +146,7 @@ describe("JSON Schema purity — generated schemas", () => {
   });
 
   test("wrapper-level keys include fileConstraints, uiHints, propertyOrder", () => {
-    const wrapperKeys = Object.keys(flowSchema.properties?.input?.properties ?? {});
+    const wrapperKeys = Object.keys(agentSchema.properties?.input?.properties ?? {});
     expect(wrapperKeys).toContain("schema");
     expect(wrapperKeys).toContain("fileConstraints");
     expect(wrapperKeys).toContain("uiHints");
@@ -156,7 +156,7 @@ describe("JSON Schema purity — generated schemas", () => {
   for (const keyword of BANNED_KEYWORDS_IN_SCHEMA) {
     test(`schema object does not contain '${keyword}'`, () => {
       // Check the schema sub-object only (not the wrapper)
-      const schemaObj = flowSchema.properties?.input?.properties?.schema;
+      const schemaObj = agentSchema.properties?.input?.properties?.schema;
       const violations = assertNoKeywordInObject(schemaObj, keyword, "schema");
       expect(violations).toEqual([]);
     });
@@ -166,9 +166,9 @@ describe("JSON Schema purity — generated schemas", () => {
 describe("JSON Schema purity — manifest validation", () => {
   test("manifest with file field using standard JSON Schema is accepted", () => {
     const manifest = {
-      name: "@test/flow",
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       displayName: "Test",
       author: "test",
@@ -204,15 +204,15 @@ describe("JSON Schema purity — manifest validation", () => {
         propertyOrder: ["query", "doc", "docs"],
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
   });
 
   test("manifest with old type:'file' is rejected", () => {
     const manifest = {
-      name: "@test/flow",
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       displayName: "Test",
       author: "test",
@@ -225,15 +225,15 @@ describe("JSON Schema purity — manifest validation", () => {
         },
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(false);
   });
 
   test("schema properties in parsed manifest contain no non-standard keywords", () => {
     const manifest = {
-      name: "@test/flow",
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       displayName: "Test",
       author: "test",
@@ -254,7 +254,7 @@ describe("JSON Schema purity — manifest validation", () => {
         propertyOrder: ["name", "file"],
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (!result.success) return;
 

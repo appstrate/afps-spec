@@ -169,7 +169,7 @@ export function createSchemas(majorVersion: number) {
   const commonFields = {
     name: scopedName,
     version: semverVersion,
-    type: z.enum(["flow", "skill", "tool", "provider"]),
+    type: z.enum(["agent", "skill", "tool", "provider"]),
     displayName: z.string().optional(),
     description: z.string().optional(),
     keywords: z.array(z.string()).optional(),
@@ -179,9 +179,9 @@ export function createSchemas(majorVersion: number) {
     dependencies: dependenciesSchema,
   };
 
-  const flowManifestSchema = z.looseObject({
+  const agentManifestSchema = z.looseObject({
     ...commonFields,
-    type: z.literal("flow"),
+    type: z.literal("agent"),
     schemaVersion: schemaVersionField,
     displayName: z.string().min(1),
     author: z.string().min(1),
@@ -279,7 +279,7 @@ export function createSchemas(majorVersion: number) {
       }
     });
 
-  return { flowManifestSchema, skillManifestSchema, toolManifestSchema, providerManifestSchema };
+  return { agentManifestSchema, skillManifestSchema, toolManifestSchema, providerManifestSchema };
 }
 
 // ─────────────────────────────────────────────
@@ -288,7 +288,7 @@ export function createSchemas(majorVersion: number) {
 
 const v1 = createSchemas(1);
 
-export const flowManifestSchema = v1.flowManifestSchema;
+export const agentManifestSchema = v1.agentManifestSchema;
 export const skillManifestSchema = v1.skillManifestSchema;
 export const toolManifestSchema = v1.toolManifestSchema;
 export const providerManifestSchema = v1.providerManifestSchema;

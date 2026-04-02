@@ -1,9 +1,9 @@
-# Agent Flow Packaging Standard (AFPS)
+# Agent Format Packaging Standard (AFPS)
 
 ![AFPS v1.0](https://img.shields.io/badge/AFPS-v1.0-blue)
 
 AFPS is an open specification for declaring portable AI workflow packages.
-It standardizes how flows, skills, tools, and providers are described, versioned, and distributed.
+It standardizes how agents, skills, tools, and providers are described, versioned, and distributed.
 It focuses on package definition and composition, not on tool calling or agent-to-agent transport.
 
 ## Ecosystem Positioning
@@ -12,7 +12,7 @@ Existing AI agent standards define **capabilities** — what an agent can do and
 
 ```text
                 ┌───────────────────────────────┐
-  Goal          │  AFPS Flow                    │  "Process my inbox and
+  Goal          │  AFPS Agent                   │  "Process my inbox and
                 │  prompt.md + manifest.json    │  summarize support requests"
                 ├───────────────────────────────┤
   Capability    │  Skills (SKILL.md)            │  "Rewrite in a professional tone"
@@ -25,7 +25,7 @@ Existing AI agent standards define **capabilities** — what an agent can do and
                 └───────────────────────────────┘
 ```
 
-A flow's `prompt.md` is the equivalent of what a user would type to give an agent its objective. Skills and tools are the capabilities the agent draws on to reach that objective. Providers are the authenticated service connections. AFPS packages all of this into a portable, versioned `.afps` artifact (a standard ZIP file).
+An agent's `prompt.md` is the equivalent of what a user would type to give an agent its objective. Skills and tools are the capabilities the agent draws on to reach that objective. Providers are the authenticated service connections. AFPS packages all of this into a portable, versioned `.afps` artifact (a standard ZIP file).
 
 - **MCP** defines runtime tool invocation. AFPS does not define tool-calling transport; a runtime may choose to expose AFPS tools via MCP.
 - **Agent Skills** defines reusable capabilities (`SKILL.md`). AFPS skill packages are a strict superset: a valid Agent Skill directory becomes an AFPS skill when a `manifest.json` is added. The `SKILL.md` format, frontmatter fields, and optional directories (`scripts/`, `references/`, `assets/`) are preserved unchanged. AFPS adds identity, versioning, and dependency resolution.
@@ -35,14 +35,14 @@ No existing standard covers the goal layer: structured workflow packages with de
 
 ## Quick Start
 
-Create a minimal flow package with two files:
+Create a minimal agent package with two files:
 
 **`manifest.json`**
 ```json
 {
   "name": "@my-org/hello-world",
   "version": "1.0.0",
-  "type": "flow",
+  "type": "agent",
   "schemaVersion": "1.0",
   "displayName": "Hello World",
   "author": "My Org",
@@ -55,16 +55,16 @@ Create a minimal flow package with two files:
 Summarize the latest unread emails and list any action items.
 ```
 
-ZIP both files together (using the `.afps` extension by convention) — that's a valid AFPS flow package. See [examples/](./examples/) for more, or read the [primer](./primer.md) for a guided introduction.
+ZIP both files together (using the `.afps` extension by convention) — that's a valid AFPS agent package. See [examples/](./examples/) for more, or read the [primer](./primer.md) for a guided introduction.
 
-### How a flow composes its dependencies
+### How an agent composes its dependencies
 
-A real flow declares the skills, tools, and providers it needs:
+A real agent declares the skills, tools, and providers it needs:
 
 ```text
                   ┌──────────────────────────────┐
                   │  @acme/customer-intake       │
-                  │  type: flow                  │
+                  │  type: agent                 │
                   │  prompt.md = the objective   │
                   └──────┬───────────────────────┘
                          │ dependencies
@@ -78,13 +78,13 @@ A real flow declares the skills, tools, and providers it needs:
   └──────────────┘ └────────────┘ └────────────┘
 ```
 
-The flow's manifest lists these in a single `dependencies` field with semver ranges. See the [full example](./examples/flow-full/manifest.json).
+The agent's manifest lists these in a single `dependencies` field with semver ranges. See the [full example](./examples/agent-full/manifest.json).
 
 ## Repository Contents
 
 - [spec.md](./spec.md) — the AFPS v1.0 draft specification
 - [primer.md](./primer.md) — non-normative introduction for newcomers
-- [examples/](./examples/) — minimal and full package examples (flow, skill, tool, provider)
+- [examples/](./examples/) — minimal and full package examples (agent, skill, tool, provider)
 - [schema/](./schema/) — JSON Schema files (see [schema/README](./schema/README.md))
 - [GOVERNANCE.md](./GOVERNANCE.md) — change process and stewardship
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — how to contribute
@@ -95,7 +95,7 @@ The flow's manifest lists these in a single `dependencies` field with semver ran
 AFPS defines:
 
 - Package identity with scoped names and semantic versions
-- Manifest fields for `flow`, `skill`, `tool`, and `provider`
+- Manifest fields for `agent`, `skill`, `tool`, and `provider`
 - Dependencies and provider configuration
 - A constrained schema system for input, output, and config
 - ZIP package structure for distribution

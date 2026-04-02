@@ -20,17 +20,17 @@ const OUTPUT_DIR = resolve(dirname(import.meta.filename!), "..", VERSION_TAG);
 
 const isCheck = process.argv.includes("--check");
 
-const { flowManifestSchema, skillManifestSchema, toolManifestSchema, providerManifestSchema } =
+const { agentManifestSchema, skillManifestSchema, toolManifestSchema, providerManifestSchema } =
   createSchemas(MAJOR);
 
 const entries = [
   {
-    filename: "flow.schema.json",
-    title: "AFPS Flow Manifest",
+    filename: "agent.schema.json",
+    title: "AFPS Agent Manifest",
     description:
-      "Manifest schema for AFPS flow packages. " +
-      "A flow declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
-    schema: flowManifestSchema,
+      "Manifest schema for AFPS agent packages. " +
+      "An agent declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
+    schema: agentManifestSchema,
   },
   {
     filename: "skill.schema.json",

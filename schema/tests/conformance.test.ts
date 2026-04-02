@@ -12,7 +12,7 @@ import { describe, test, expect } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import {
-  flowManifestSchema,
+  agentManifestSchema,
   skillManifestSchema,
   toolManifestSchema,
   providerManifestSchema,
@@ -40,12 +40,12 @@ function expectInvalid(schema: { safeParse: (v: unknown) => { success: boolean }
 // ─────────────────────────────────────────────
 
 describe("valid examples", () => {
-  test("flow-minimal", async () => {
-    expectValid(flowManifestSchema, await loadExample("examples/flow-minimal/manifest.json"));
+  test("agent-minimal", async () => {
+    expectValid(agentManifestSchema, await loadExample("examples/agent-minimal/manifest.json"));
   });
 
-  test("flow-full", async () => {
-    expectValid(flowManifestSchema, await loadExample("examples/flow-full/manifest.json"));
+  test("agent-full", async () => {
+    expectValid(agentManifestSchema, await loadExample("examples/agent-full/manifest.json"));
   });
 
   test("skill-minimal", async () => {
@@ -142,52 +142,52 @@ describe("versioning (§2.3)", () => {
 // ─────────────────────────────────────────────
 
 describe("package types (§2.1)", () => {
-  test("flow type requires flow-specific fields", () => {
-    // Minimal flow — needs schemaVersion, displayName, author
-    expectValid(flowManifestSchema, {
-      name: "@test/flow",
+  test("agent type requires agent-specific fields", () => {
+    // Minimal agent — needs schemaVersion, displayName, author
+    expectValid(agentManifestSchema, {
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
-      displayName: "Test Flow",
+      displayName: "Test Agent",
       author: "test",
     });
 
     // Missing author
-    expectInvalid(flowManifestSchema, {
-      name: "@test/flow",
+    expectInvalid(agentManifestSchema, {
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
-      displayName: "Test Flow",
+      displayName: "Test Agent",
     });
 
     // Missing displayName
-    expectInvalid(flowManifestSchema, {
-      name: "@test/flow",
+    expectInvalid(agentManifestSchema, {
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       author: "test",
     });
   });
 
-  test("flow author must be non-empty", () => {
-    expectInvalid(flowManifestSchema, {
-      name: "@test/flow",
+  test("agent author must be non-empty", () => {
+    expectInvalid(agentManifestSchema, {
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       displayName: "Test",
       author: "",
     });
   });
 
-  test("flow displayName must be non-empty", () => {
-    expectInvalid(flowManifestSchema, {
-      name: "@test/flow",
+  test("agent displayName must be non-empty", () => {
+    expectInvalid(agentManifestSchema, {
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       displayName: "",
       author: "test",
@@ -282,16 +282,16 @@ describe("common manifest fields (§3.1)", () => {
 
 describe("dependencies (§4)", () => {
   const base = {
-    name: "@test/flow",
+    name: "@test/agent",
     version: "1.0.0",
-    type: "flow",
+    type: "agent",
     schemaVersion: "1.0",
     displayName: "Test",
     author: "test",
   };
 
   test("valid dependency declarations", () => {
-    expectValid(flowManifestSchema, {
+    expectValid(agentManifestSchema, {
       ...base,
       dependencies: {
         skills: { "@acme/rewrite": "^1.0.0" },
@@ -302,32 +302,32 @@ describe("dependencies (§4)", () => {
   });
 
   test("empty dependencies is valid", () => {
-    expectValid(flowManifestSchema, { ...base, dependencies: {} });
+    expectValid(agentManifestSchema, { ...base, dependencies: {} });
   });
 
   test("partial dependency sections", () => {
-    expectValid(flowManifestSchema, {
+    expectValid(agentManifestSchema, {
       ...base,
       dependencies: { providers: { "@acme/gmail": "^1.0.0" } },
     });
   });
 
   test("wildcard version range", () => {
-    expectValid(flowManifestSchema, {
+    expectValid(agentManifestSchema, {
       ...base,
       dependencies: { skills: { "@acme/skill": "*" } },
     });
   });
 
   test("dependency keys must be scoped names", () => {
-    expectInvalid(flowManifestSchema, {
+    expectInvalid(agentManifestSchema, {
       ...base,
       dependencies: { skills: { "bad-name": "^1.0.0" } },
     });
   });
 
   test("dependency version must be a valid semver range", () => {
-    expectInvalid(flowManifestSchema, {
+    expectInvalid(agentManifestSchema, {
       ...base,
       dependencies: { skills: { "@acme/skill": "not-a-range!!!" } },
     });
@@ -340,16 +340,16 @@ describe("dependencies (§4)", () => {
 
 describe("schema system (§5)", () => {
   const base = {
-    name: "@test/flow",
+    name: "@test/agent",
     version: "1.0.0",
-    type: "flow",
+    type: "agent",
     schemaVersion: "1.0",
     displayName: "Test",
     author: "test",
   };
 
   test("valid input schema with all field types", () => {
-    expectValid(flowManifestSchema, {
+    expectValid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
@@ -381,7 +381,7 @@ describe("schema system (§5)", () => {
   });
 
   test("schema container MUST be type: object", () => {
-    expectInvalid(flowManifestSchema, {
+    expectInvalid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
@@ -393,7 +393,7 @@ describe("schema system (§5)", () => {
   });
 
   test("schema properties must have a type", () => {
-    expectInvalid(flowManifestSchema, {
+    expectInvalid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
@@ -407,7 +407,7 @@ describe("schema system (§5)", () => {
   });
 
   test("unsupported field types are rejected", () => {
-    expectInvalid(flowManifestSchema, {
+    expectInvalid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
@@ -427,20 +427,20 @@ describe("schema system (§5)", () => {
         properties: { result: { type: "string" } },
       },
     };
-    expectValid(flowManifestSchema, { ...base, output: schemaBlock });
-    expectValid(flowManifestSchema, { ...base, config: schemaBlock });
+    expectValid(agentManifestSchema, { ...base, output: schemaBlock });
+    expectValid(agentManifestSchema, { ...base, config: schemaBlock });
   });
 
   test("input without schema child is rejected", () => {
-    expectInvalid(flowManifestSchema, { ...base, input: {} });
+    expectInvalid(agentManifestSchema, { ...base, input: {} });
   });
 
   test("output without schema child is rejected", () => {
-    expectInvalid(flowManifestSchema, { ...base, output: {} });
+    expectInvalid(agentManifestSchema, { ...base, output: {} });
   });
 
   test("config without schema child is rejected", () => {
-    expectInvalid(flowManifestSchema, { ...base, config: {} });
+    expectInvalid(agentManifestSchema, { ...base, config: {} });
   });
 
   test("format field is preserved on schema properties", () => {
@@ -455,7 +455,7 @@ describe("schema system (§5)", () => {
         },
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
@@ -480,7 +480,7 @@ describe("schema system (§5)", () => {
         },
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
@@ -503,7 +503,7 @@ describe("schema system (§5)", () => {
         propertyOrder: ["a", "b"],
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
@@ -512,7 +512,7 @@ describe("schema system (§5)", () => {
   });
 
   test("enum field support", () => {
-    expectValid(flowManifestSchema, {
+    expectValid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
@@ -532,22 +532,22 @@ describe("schema system (§5)", () => {
 
 describe("execution model (§6)", () => {
   const base = {
-    name: "@test/flow",
+    name: "@test/agent",
     version: "1.0.0",
-    type: "flow",
+    type: "agent",
     schemaVersion: "1.0",
     displayName: "Test",
     author: "test",
   };
 
   test("timeout is optional", () => {
-    expectValid(flowManifestSchema, { ...base });
-    expectValid(flowManifestSchema, { ...base, timeout: 300 });
+    expectValid(agentManifestSchema, { ...base });
+    expectValid(agentManifestSchema, { ...base, timeout: 300 });
   });
 
   test("timeout must be positive", () => {
-    expectInvalid(flowManifestSchema, { ...base, timeout: 0 });
-    expectInvalid(flowManifestSchema, { ...base, timeout: -1 });
+    expectInvalid(agentManifestSchema, { ...base, timeout: 0 });
+    expectInvalid(agentManifestSchema, { ...base, timeout: -1 });
   });
 });
 
@@ -760,21 +760,21 @@ describe("provider authentication (§7)", () => {
 });
 
 // ─────────────────────────────────────────────
-// §4.4 — Provider configuration in flows
+// §4.4 — Provider configuration in agents
 // ─────────────────────────────────────────────
 
 describe("providersConfiguration (§4.4)", () => {
   const base = {
-    name: "@test/flow",
+    name: "@test/agent",
     version: "1.0.0",
-    type: "flow",
+    type: "agent",
     schemaVersion: "1.0",
     displayName: "Test",
     author: "test",
   };
 
   test("valid provider configuration", () => {
-    expectValid(flowManifestSchema, {
+    expectValid(agentManifestSchema, {
       ...base,
       dependencies: { providers: { "@acme/gmail": "^1.0.0" } },
       providersConfiguration: {
@@ -810,9 +810,9 @@ describe("extensibility (§10)", () => {
 
   test("unknown fields in dependencies are preserved", () => {
     const manifest = {
-      name: "@test/flow",
+      name: "@test/agent",
       version: "1.0.0",
-      type: "flow",
+      type: "agent",
       schemaVersion: "1.0",
       displayName: "Test",
       author: "test",
@@ -821,7 +821,7 @@ describe("extensibility (§10)", () => {
         "x-custom-deps": "preserved",
       },
     };
-    const result = flowManifestSchema.safeParse(manifest);
+    const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       const deps = (result.data as Record<string, unknown>).dependencies as Record<string, unknown>;
@@ -831,26 +831,26 @@ describe("extensibility (§10)", () => {
 });
 
 // ─────────────────────────────────────────────
-// §3.2 — Flow schemaVersion format
+// §3.2 — Agent schemaVersion format
 // ─────────────────────────────────────────────
 
 describe("schemaVersion (§3.2)", () => {
   const base = {
-    name: "@test/flow",
+    name: "@test/agent",
     version: "1.0.0",
-    type: "flow",
+    type: "agent",
     displayName: "Test",
     author: "test",
   };
 
   test("valid schemaVersion formats", () => {
-    expectValid(flowManifestSchema, { ...base, schemaVersion: "1.0" });
-    expectValid(flowManifestSchema, { ...base, schemaVersion: "1.1" });
-    expectValid(flowManifestSchema, { ...base, schemaVersion: "1.99" });
+    expectValid(agentManifestSchema, { ...base, schemaVersion: "1.0" });
+    expectValid(agentManifestSchema, { ...base, schemaVersion: "1.1" });
+    expectValid(agentManifestSchema, { ...base, schemaVersion: "1.99" });
   });
 
-  test("schemaVersion is required for flows", () => {
-    expectInvalid(flowManifestSchema, { ...base });
+  test("schemaVersion is required for agents", () => {
+    expectInvalid(agentManifestSchema, { ...base });
   });
 
   test("schemaVersion is optional for skills", () => {
@@ -886,7 +886,7 @@ describe("schemaVersion (§3.2)", () => {
     expectValid(providerManifestSchema, { ...provBase, schemaVersion: "1.0" });
   });
 
-  test("schemaVersion format enforced on non-flow types", () => {
+  test("schemaVersion format enforced on non-agent types", () => {
     expectInvalid(skillManifestSchema, {
       name: "@test/skill",
       version: "1.0.0",
@@ -902,9 +902,9 @@ describe("schemaVersion (§3.2)", () => {
   });
 
   test("invalid schemaVersion formats rejected", () => {
-    expectInvalid(flowManifestSchema, { ...base, schemaVersion: "2.0" }); // wrong major
-    expectInvalid(flowManifestSchema, { ...base, schemaVersion: "1.0.0" }); // has patch
-    expectInvalid(flowManifestSchema, { ...base, schemaVersion: "v1.0" }); // has prefix
+    expectInvalid(agentManifestSchema, { ...base, schemaVersion: "2.0" }); // wrong major
+    expectInvalid(agentManifestSchema, { ...base, schemaVersion: "1.0.0" }); // has patch
+    expectInvalid(agentManifestSchema, { ...base, schemaVersion: "v1.0" }); // has prefix
   });
 });
 

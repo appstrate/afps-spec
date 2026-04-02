@@ -1,4 +1,4 @@
-# Agent Flow Packaging Standard (AFPS) Specification
+# Agent Format Packaging Standard (AFPS) Specification
 
 **Copyright** &copy; 2026 Appstrate contributors. Licensed under [CC-BY-4.0](./LICENSE).
 
@@ -6,7 +6,7 @@
 
 ### Abstract
 
-Agent Flow Packaging Standard (AFPS) is an open specification for declaring portable AI workflow packages. It defines a JSON-based manifest format for four package types — flows, skills, tools, and providers — along with their dependency model, schema system, archive layout, and provider authentication metadata. AFPS standardizes package definition and composition; it does not define tool-calling protocols, agent-to-agent transport, or runtime execution APIs.
+Agent Format Packaging Standard (AFPS) is an open specification for declaring portable AI workflow packages. It defines a JSON-based manifest format for four package types — agents, skills, tools, and providers — along with their dependency model, schema system, archive layout, and provider authentication metadata. AFPS standardizes package definition and composition; it does not define tool-calling protocols, agent-to-agent transport, or runtime execution APIs.
 
 ### Status of this Document
 
@@ -37,7 +37,7 @@ This draft is published for community review and early implementation feedback. 
   - [2.5 Package Archive Format](#25-package-archive-format)
 - [3. Manifest Specification](#3-manifest-specification)
   - [3.1 Common Fields](#31-common-fields)
-  - [3.2 Flow Manifest](#32-flow-manifest)
+  - [3.2 Agent Manifest](#32-agent-manifest)
   - [3.3 Skill Package](#33-skill-package)
   - [3.4 Tool Package](#34-tool-package)
   - [3.5 Provider Package](#35-provider-package)
@@ -85,11 +85,11 @@ This draft is published for community review and early implementation feedback. 
 
 ### 1.1 Purpose
 
-Agent Flow Packaging Standard (AFPS) defines a declarative package format for AI workflows and closely related package types.
+Agent Format Packaging Standard (AFPS) defines a declarative package format for AI workflows and closely related package types.
 
-The central artifact in AFPS is the **flow** — a package that captures the user's intent (via a `prompt.md` companion file) together with everything the agent needs to fulfill it: skills, tools, provider connections, input and output schemas, and execution settings. A flow execution is **non-interactive and run-to-completion**: the agent receives the objective, the input data, and the available resources, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the flow runs from start to finish without user interaction. Where other standards define agent capabilities (what an agent *can do*), an AFPS flow defines an objective (what the agent *should accomplish*).
+The central artifact in AFPS is the **agent** — a package that captures the user's intent (via a `prompt.md` companion file) together with everything the agent needs to fulfill it: skills, tools, provider connections, input and output schemas, and execution settings. An agent execution is **non-interactive and run-to-completion**: the agent receives the objective, the input data, and the available resources, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the agent runs from start to finish without user interaction. Where other standards define agent capabilities (what an agent *can do*), an AFPS agent defines an objective (what the agent *should accomplish*).
 
-AFPS also defines three supporting package types — **skills** (reusable instructions), **tools** (callable capabilities), and **providers** (service connectors) — that flows compose as dependencies.
+AFPS also defines three supporting package types — **skills** (reusable instructions), **tools** (callable capabilities), and **providers** (service connectors) — that agents compose as dependencies.
 
 The goal of AFPS is to let producers publish portable artifacts that describe:
 
@@ -105,7 +105,7 @@ AFPS is intentionally centered on package definition. It standardizes package me
 
 This specification defines:
 
-- package types: `flow`, `skill`, `tool`, `provider`;
+- package types: `agent`, `skill`, `tool`, `provider`;
 - package identity and versioning;
 - manifest fields and companion file requirements;
 - ZIP archive structure;
@@ -129,7 +129,7 @@ AFPS operates at a different abstraction level than existing AI agent standards.
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│  Goal layer          AFPS Flow                          │
+│  Goal layer          AFPS Agent                         │
 │                      "Process my inbox and create       │
 │                       a summary of support requests"    │
 │                      = the user's intent, packaged      │
@@ -147,12 +147,12 @@ AFPS operates at a different abstraction level than existing AI agent standards.
 └─────────────────────────────────────────────────────────┘
 ```
 
-A flow's `prompt.md` replaces what a human would type to give an agent its objective. Skills, tools, and providers are the resources the agent uses to fulfill that objective. AFPS packages all of these together into a portable, versioned artifact.
+An agent's `prompt.md` replaces what a human would type to give an agent its objective. Skills, tools, and providers are the resources the agent uses to fulfill that objective. AFPS packages all of these together into a portable, versioned artifact.
 
 Existing standards address different concerns:
 
 - **MCP** [Model Context Protocol]: defines how agents invoke tools at runtime (JSON-RPC transport). AFPS does not define tool-calling transport. A runtime MAY choose to expose AFPS tools via MCP, but this is an implementation concern, not an AFPS requirement.
-- **Agent Skills** [Anthropic / AAIF]: defines the `SKILL.md` format for declaring reusable agent capabilities. AFPS skill packages (§3.3) are a strict superset of Agent Skills: a valid Agent Skill directory (`SKILL.md` plus optional `scripts/`, `references/`, `assets/`) becomes a valid AFPS skill package when a `manifest.json` is added. The `SKILL.md` format, including all frontmatter fields defined by Agent Skills, is preserved unchanged. AFPS adds package identity, versioning, dependency declarations, and a distribution format — it does not alter the skill content model. Skills define **capabilities**, not **goals** — the goal comes from the AFPS flow that composes them.
+- **Agent Skills** [Anthropic / AAIF]: defines the `SKILL.md` format for declaring reusable agent capabilities. AFPS skill packages (§3.3) are a strict superset of Agent Skills: a valid Agent Skill directory (`SKILL.md` plus optional `scripts/`, `references/`, `assets/`) becomes a valid AFPS skill package when a `manifest.json` is added. The `SKILL.md` format, including all frontmatter fields defined by Agent Skills, is preserved unchanged. AFPS adds package identity, versioning, dependency declarations, and a distribution format — it does not alter the skill content model. Skills define **capabilities**, not **goals** — the goal comes from the AFPS agent that composes them.
 - **A2A** [Agent-to-Agent Protocol]: defines inter-agent discovery and communication. AFPS does not compete with A2A; a future extension could declare A2A Agent Card metadata within an AFPS manifest using the `x-` convention (§10).
 
 These standards are complementary and operate at different layers:
@@ -161,7 +161,7 @@ These standards are complementary and operate at different layers:
 Discovery    MCP Registry / A2A Agent Cards     "where to find agents and tools"
 Transport    MCP JSON-RPC / A2A Tasks            "how agents communicate at runtime"
 Capability   Agent Skills / MCP Tools            "what an agent knows how to do"
-Goal         AFPS Flow                            "what the agent should accomplish"
+Goal         AFPS Agent                           "what the agent should accomplish"
 Packaging    AFPS                                 "how it is all declared and distributed"
 ```
 
@@ -188,7 +188,7 @@ Conforming producers MUST emit manifests and package archives that satisfy the r
 
 AFPS defines four package types:
 
-- `flow`: a complete workflow package consisting of manifest metadata and a `prompt.md` companion file;
+- `agent`: a complete workflow package consisting of manifest metadata and a `prompt.md` companion file;
 - `skill`: a declarative capability package consisting of a minimal manifest and `SKILL.md`;
 - `tool`: a runtime capability package consisting of a manifest declaring a single tool interface plus an implementation source file referenced by `entrypoint`;
 - `provider`: a service connector package described entirely by `manifest.json`.
@@ -245,7 +245,7 @@ Every package archive MUST contain `manifest.json` at the archive root. Addition
 
 | Type | Required companion content |
 | --- | --- |
-| `flow` | `prompt.md` at archive root, non-empty |
+| `agent` | `prompt.md` at archive root, non-empty |
 | `skill` | `SKILL.md` at archive root; optional `scripts/`, `references/`, `assets/` directories (see §3.3) |
 | `tool` | source file referenced by manifest `entrypoint`; optional `TOOL.md` |
 | `provider` | optional `PROVIDER.md` at archive root |
@@ -281,15 +281,15 @@ All manifests are JSON objects. Unknown top-level fields and unknown nested fiel
 #### `type`
 - **Type**: string
 - **Required**: MUST for all package types
-- **Format**: one of `flow`, `skill`, `tool`, `provider`
+- **Format**: one of `agent`, `skill`, `tool`, `provider`
 - **Description**: Determines package validation and required companion files.
-- **Example**: `flow`
+- **Example**: `agent`
 - **Default**: none
 
 #### `displayName`
 - **Type**: string
-- **Required**: MUST for `flow`; SHOULD for `skill`, `tool`, and `provider`
-- **Format**: for flows, minimum length 1
+- **Required**: MUST for `agent`; SHOULD for `skill`, `tool`, and `provider`
+- **Format**: for agents, minimum length 1
 - **Description**: Human-facing label for the package.
 - **Example**: `Customer Intake Assistant`
 - **Default**: none
@@ -328,7 +328,7 @@ All manifests are JSON objects. Unknown top-level fields and unknown nested fiel
 
 #### `schemaVersion`
 - **Type**: string
-- **Required**: MUST for `flow`; MAY for other package types
+- **Required**: MUST for `agent`; MAY for other package types
 - **Format**: `MAJOR.MINOR` where both segments are non-negative integers (e.g., `1.0`, `2.1`). The format follows a subset of semantic versioning without the patch component. A change in `MAJOR` indicates a breaking manifest model change; a change in `MINOR` indicates an additive, backwards-compatible revision.
 - **Description**: Declares which version of the AFPS manifest model the package targets. This field allows consumers to select the appropriate validation rules when the specification evolves. Producers MUST emit `1.0` for packages targeting this draft.
 - **Example**: `1.0`
@@ -342,15 +342,15 @@ All manifests are JSON objects. Unknown top-level fields and unknown nested fiel
 - **Example**: `{ "providers": { "@example/gmail": "^1.0.0" }, "skills": { "@example/rewrite-tone": "^1.0.0" } }`
 - **Default**: none
 
-### 3.2 Flow Manifest
+### 3.2 Agent Manifest
 
-Flow manifests extend the common fields above. A conforming flow manifest MUST include `schemaVersion`, `displayName`, and `author`. Providers listed in `providersConfiguration` SHOULD also be declared in `dependencies.providers`.
+Agent manifests extend the common fields above. A conforming agent manifest MUST include `schemaVersion`, `displayName`, and `author`. Providers listed in `providersConfiguration` SHOULD also be declared in `dependencies.providers`.
 
 #### `author`
 - **Type**: string
-- **Required**: MUST for `flow`
+- **Required**: MUST for `agent`
 - **Format**: free text
-- **Description**: Human author or publishing identity for the flow.
+- **Description**: Human author or publishing identity for the agent.
 - **Example**: `AFPS Examples`
 - **Default**: none
 
@@ -366,7 +366,7 @@ Flow manifests extend the common fields above. A conforming flow manifest MUST i
 - **Type**: object
 - **Required**: MAY
 - **Format**: wrapper object containing a required `schema` member
-- **Description**: Describes per-execution input — data that a user or caller supplies each time the flow runs. A consumer SHOULD prompt for input values at execution time. Typical examples include a search query, a file to process, or a message to analyze.
+- **Description**: Describes per-execution input — data that a user or caller supplies each time the agent runs. A consumer SHOULD prompt for input values at execution time. Typical examples include a search query, a file to process, or a message to analyze.
 - **Example**: `{ "schema": { "type": "object", "properties": { "query": { "type": "string" } } } }`
 - **Default**: none
 
@@ -374,7 +374,7 @@ Flow manifests extend the common fields above. A conforming flow manifest MUST i
 - **Type**: object
 - **Required**: MAY
 - **Format**: wrapper object containing a required `schema` member
-- **Description**: Describes the structured result that the flow produces at the end of each execution. A consumer MAY use this schema to validate or parse the language model's response.
+- **Description**: Describes the structured result that the agent produces at the end of each execution. A consumer MAY use this schema to validate or parse the language model's response.
 - **Example**: `{ "schema": { "type": "object", "properties": { "summary": { "type": "string" } } } }`
 - **Default**: none
 
@@ -382,7 +382,7 @@ Flow manifests extend the common fields above. A conforming flow manifest MUST i
 - **Type**: object
 - **Required**: MAY
 - **Format**: wrapper object containing a required `schema` member
-- **Description**: Describes flow configuration — settings that are defined once during setup and remain constant across executions. A consumer SHOULD persist config values and reuse them without prompting on each run. Typical examples include a preferred language, a target folder, or a notification threshold. Config values MAY have `default` values in the schema.
+- **Description**: Describes agent configuration — settings that are defined once during setup and remain constant across executions. A consumer SHOULD persist config values and reuse them without prompting on each run. Typical examples include a preferred language, a target folder, or a notification threshold. Config values MAY have `default` values in the schema.
 - **Example**: `{ "schema": { "type": "object", "properties": { "language": { "type": "string", "default": "fr" } } } }`
 - **Default**: none
 
@@ -390,7 +390,7 @@ Flow manifests extend the common fields above. A conforming flow manifest MUST i
 - **Type**: number
 - **Required**: MAY
 - **Format**: positive number, in seconds
-- **Description**: Timeout hint communicating how long the flow needs to complete. Consumers MAY use this to limit execution duration.
+- **Description**: Timeout hint communicating how long the agent needs to complete. Consumers MAY use this to limit execution duration.
 - **Example**: `300`
 - **Default**: none
 
@@ -488,7 +488,7 @@ A tool package MUST contain `manifest.json` at the archive root and an implement
 - **Description**: Schema for the parameters the tool accepts. Consumers MAY use this for validation and for generating tool-use prompts.
 - **Example**: `{ "type": "object", "properties": { "url": { "type": "string" } }, "required": ["url"] }`
 
-`tool.inputSchema` follows standard JSON Schema vocabulary for describing input parameters. It is not constrained to the AFPS schema subset defined in §5, which applies only to flow `input`, `output`, and `config` sections.
+`tool.inputSchema` follows standard JSON Schema vocabulary for describing input parameters. It is not constrained to the AFPS schema subset defined in §5, which applies only to agent `input`, `output`, and `config` sections.
 
 `entrypoint` MUST NOT contain path traversal segments (`..`). Producers SHOULD reference a file at the archive root.
 
@@ -542,12 +542,12 @@ A package declares its dependencies using the `dependencies` field. The field co
 
 Each map entry is a scoped package name paired with a semver version range. Dependency keys MUST be valid scoped names matching the pattern defined in §2.2. All package types MAY declare dependencies.
 
-The following diagram illustrates how a flow composes its dependencies:
+The following diagram illustrates how an agent composes its dependencies:
 
 ```text
                   ┌────────────────────────────────┐
                   │  @acme/customer-intake         │
-                  │  type: flow                    │
+                  │  type: agent                   │
                   │  prompt.md (objective)         │
                   └──────┬─────────────────────────┘
                          │ dependencies
@@ -741,8 +741,8 @@ Although the three sections share the same structural format, they have distinct
 
 | Section | Lifecycle | Timing | Description |
 | --- | --- | --- | --- |
-| `input` | Per-execution | Supplied each time the flow runs | Data the user provides for a specific run (e.g., a search query, a file to process). |
-| `output` | Per-execution | Produced at the end of each run | Structured result the flow returns (e.g., a summary, a report). |
+| `input` | Per-execution | Supplied each time the agent runs | Data the user provides for a specific run (e.g., a search query, a file to process). |
+| `output` | Per-execution | Produced at the end of each run | Structured result the agent returns (e.g., a summary, a report). |
 | `config` | Per-deployment | Set once during setup, reused across runs | Settings that remain constant across executions (e.g., preferred language, notification threshold). |
 
 A consumer SHOULD prompt for `input` values at each execution and SHOULD persist `config` values so they do not need to be re-entered.
@@ -751,13 +751,13 @@ A consumer SHOULD prompt for `input` values at each execution and SHOULD persist
 
 ### 6.1 Execution Context
 
-A `flow` package MUST include a non-empty `prompt.md` companion file. That file contains the primary instructions for the flow.
+An `agent` package MUST include a non-empty `prompt.md` companion file. That file contains the primary instructions for the agent.
 
-A flow execution is **non-interactive and run-to-completion**: the agent receives the full execution context, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the flow runs from start to finish without user interaction.
+An agent execution is **non-interactive and run-to-completion**: the agent receives the full execution context, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the agent runs from start to finish without user interaction.
 
 A consumer MAY construct an execution context from:
 
-- the validated flow manifest;
+- the validated agent manifest;
 - `prompt.md`;
 - validated `input` and `config` data;
 - resolved providers, skills, and tools; and
@@ -767,7 +767,7 @@ AFPS does not define prompt templating, state persistence, scheduling, or transp
 
 ### 6.2 Timeout
 
-`timeout` is a numeric hint expressed in seconds. It communicates the producer's expectation of how long the flow needs to complete.
+`timeout` is a numeric hint expressed in seconds. It communicates the producer's expectation of how long the agent needs to complete.
 
 AFPS v1.0 does not impose a manifest-level default for this field. If a consumer chooses a local default, it SHOULD document it separately from the manifest itself.
 
@@ -860,11 +860,11 @@ Provider packages (§3.5, §7) describe authentication configurations that invol
 
 ### 8.4 Prompt Injection
 
-Flow packages include a `prompt.md` companion file whose content is typically sent to a language model. Malicious or compromised packages can embed prompt injection attacks:
+Agent packages include a `prompt.md` companion file whose content is typically sent to a language model. Malicious or compromised packages can embed prompt injection attacks:
 
 - consumers SHOULD clearly delimit system instructions from package-provided prompts;
 - consumers SHOULD sanitize or validate `input` data before interpolating it into prompts;
-- consumers SHOULD NOT grant flow prompts the ability to modify system-level configurations or access credentials beyond those declared in `dependencies`.
+- consumers SHOULD NOT grant agent prompts the ability to modify system-level configurations or access credentials beyond those declared in `dependencies`.
 
 ### 8.5 Supply Chain
 
@@ -885,10 +885,10 @@ Provider definitions include `authorizedUris` to restrict which upstream endpoin
 
 ## 9. Privacy Considerations
 
-AFPS packages may process personally identifiable information (PII) through flow inputs, provider connections, and execution outputs:
+AFPS packages may process personally identifiable information (PII) through agent inputs, provider connections, and execution outputs:
 
-- consumers SHOULD document which data is transmitted to external services during flow execution;
-- consumers SHOULD provide users with visibility into what data a flow accesses via its `dependencies` and `providersConfiguration` declarations;
+- consumers SHOULD document which data is transmitted to external services during agent execution;
+- consumers SHOULD provide users with visibility into what data an agent accesses via its `dependencies` and `providersConfiguration` declarations;
 - consumers SHOULD ensure that execution state, credentials, and intermediate data are appropriately managed according to data protection requirements;
 - registries SHOULD NOT require or store PII in package manifests beyond the `author` field.
 
@@ -904,9 +904,9 @@ Fields that are not defined by this specification MUST use a name prefixed with 
 
 ```json
 {
-  "name": "@example/my-flow",
+  "name": "@example/my-agent",
   "version": "1.0.0",
-  "type": "flow",
+  "type": "agent",
   "x-acme-priority": "high",
   "x-acme-cost-center": "engineering"
 }
@@ -954,8 +954,8 @@ When an extension field gains broad adoption across multiple implementations, it
 | --- | --- | --- | --- | --- | --- |
 | `name` | all manifests | string | MUST | scoped name | none |
 | `version` | all manifests | string | MUST | valid semver version | none |
-| `type` | all manifests | string | MUST | `flow\|skill\|tool\|provider` | none |
-| `displayName` | all manifests | string | MUST for flow; SHOULD for skill, tool, and provider | flow value min length 1 | none |
+| `type` | all manifests | string | MUST | `agent\|skill\|tool\|provider` | none |
+| `displayName` | all manifests | string | MUST for agent; SHOULD for skill, tool, and provider | agent value min length 1 | none |
 | `description` | all manifests | string | MAY | free text | none |
 | `keywords` | all manifests | string[] | MAY | arbitrary strings | none |
 | `license` | all manifests | string | MAY | free text | none |
@@ -964,22 +964,22 @@ When an extension field gains broad adoption across multiple implementations, it
 | `dependencies.skills` | all manifests | map | MAY | keys scoped names, values valid semver ranges | none |
 | `dependencies.tools` | all manifests | map | MAY | keys scoped names, values valid semver ranges | none |
 | `dependencies.providers` | all manifests | map | MAY | keys scoped names, values valid semver ranges | none |
-| `author` | flow | string | MUST | free text | none |
-| `providersConfiguration` | flow | map | MAY | keyed by provider id | none |
-| `providersConfiguration.<id>.scopes` | flow | string[] | MAY | requested scopes | none |
-| `input` | flow | object | MAY | per-execution data; requires `schema` child | none |
-| `input.schema` | flow | object | MUST if `input` present | AFPS schema object | none |
-| `output` | flow | object | MAY | per-execution result; requires `schema` child | none |
-| `output.schema` | flow | object | MUST if `output` present | AFPS schema object | none |
-| `config` | flow | object | MAY | per-deployment settings; requires `schema` child | none |
-| `config.schema` | flow | object | MUST if `config` present | AFPS schema object | none |
+| `author` | agent | string | MUST | free text | none |
+| `providersConfiguration` | agent | map | MAY | keyed by provider id | none |
+| `providersConfiguration.<id>.scopes` | agent | string[] | MAY | requested scopes | none |
+| `input` | agent | object | MAY | per-execution data; requires `schema` child | none |
+| `input.schema` | agent | object | MUST if `input` present | AFPS schema object | none |
+| `output` | agent | object | MAY | per-execution result; requires `schema` child | none |
+| `output.schema` | agent | object | MUST if `output` present | AFPS schema object | none |
+| `config` | agent | object | MAY | per-deployment settings; requires `schema` child | none |
+| `config.schema` | agent | object | MUST if `config` present | AFPS schema object | none |
 | `entrypoint` | tool | string | MUST | relative path to source file | none |
 | `tool` | tool | object | MUST | tool interface declaration | none |
 | `tool.name` | tool | string | MUST | non-empty tool identifier | none |
 | `tool.description` | tool | string | MUST | tool description for agents | none |
 | `tool.inputSchema` | tool | object | MUST | JSON Schema for tool parameters | none |
-| `timeout` | flow | number | MAY | timeout hint in seconds | none |
-| `schemaVersion` | all manifests | string | MUST for flow; MAY for all others | `MAJOR.MINOR` format; producers MUST emit `1.0` for this draft | none |
+| `timeout` | agent | number | MAY | timeout hint in seconds | none |
+| `schemaVersion` | all manifests | string | MUST for agent; MAY for all others | `MAJOR.MINOR` format; producers MUST emit `1.0` for this draft | none |
 | `definition` | provider | object | MUST | extensible; contains auth metadata and auth-mode-specific sub-object | none |
 | `definition.authMode` | provider | string | MUST | `oauth2\|oauth1\|api_key\|basic\|custom` | none |
 | `definition.oauth2` | provider | object | MUST for oauth2 | extensible sub-object for OAuth2 configuration | none |
@@ -1037,8 +1037,8 @@ Common consumer-side defaults observed in interoperable implementations include:
 | `definition.authMode` | `oauth2` | provider resolution default when absent in raw extraction |
 | `definition.allowAllUris` | `false` | resolved provider definition |
 | `categories` | `[]` | resolved provider definition |
-| `schemaVersion` | `1.0` | common consumer default for new flows |
-| `timeout` | `300` | common consumer default for new flows |
+| `schemaVersion` | `1.0` | common consumer default for new agents |
+| `timeout` | `300` | common consumer default for new agents |
 
 These defaults are non-normative unless a producer explicitly writes them into the manifest.
 

@@ -7,7 +7,7 @@
 
 export {
   createSchemas,
-  flowManifestSchema,
+  agentManifestSchema,
   skillManifestSchema,
   toolManifestSchema,
   providerManifestSchema,

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://afps.appstrate.dev/schema/v1/flow.schema.json",
-  "title": "AFPS Flow Manifest",
-  "description": "Manifest schema for AFPS flow packages. A flow declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
+  "$id": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
+  "title": "AFPS Agent Manifest",
+  "description": "Manifest schema for AFPS agent packages. An agent declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
   "type": "object",
   "properties": {
     "name": {
@@ -14,7 +14,7 @@
     },
     "type": {
       "type": "string",
-      "const": "flow"
+      "const": "agent"
     },
     "displayName": {
       "type": "string",
