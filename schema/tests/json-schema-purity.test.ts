@@ -120,29 +120,23 @@ describe("JSON Schema purity — generated schemas", () => {
     expect(agentSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
   });
 
-  test("schema property definitions contain only standard JSON Schema keywords", () => {
-    // Navigate to the property schema within the input wrapper
-    const propDef =
-      agentSchema.properties?.input?.properties?.schema?.properties?.properties
-        ?.additionalProperties?.properties;
-    expect(propDef).toBeDefined();
+  test("schema field references the official JSON Schema 2020-12 meta-schema", () => {
+    const schemaField = agentSchema.properties?.input?.properties?.schema;
+    expect(schemaField).toBeDefined();
 
-    // Each key in the property definition should be a standard JSON Schema keyword
-    const keys = Object.keys(propDef);
-    expect(keys.length).toBeGreaterThan(0);
-    for (const key of keys) {
-      expect(STANDARD_PROPERTY_KEYWORDS.has(key)).toBe(true);
-    }
+    // Must use allOf with a $ref to the meta-schema
+    expect(schemaField.allOf).toBeDefined();
+    expect(schemaField.allOf.length).toBe(2);
+    expect(schemaField.allOf[0].$ref).toBe("https://json-schema.org/draft/2020-12/schema");
   });
 
-  test("type enum does not include 'file'", () => {
-    const typeEnum =
-      agentSchema.properties?.input?.properties?.schema?.properties?.properties
-        ?.additionalProperties?.properties?.type?.enum;
-    expect(typeEnum).toBeDefined();
-    expect(typeEnum).not.toContain("file");
-    expect(typeEnum).toContain("string");
-    expect(typeEnum).toContain("array");
+  test("schema field constrains root to type: object with properties", () => {
+    const schemaField = agentSchema.properties?.input?.properties?.schema;
+    const afpsConstraint = schemaField?.allOf?.[1];
+    expect(afpsConstraint).toBeDefined();
+    expect(afpsConstraint.properties?.type?.const).toBe("object");
+    expect(afpsConstraint.required).toContain("type");
+    expect(afpsConstraint.required).toContain("properties");
   });
 
   test("wrapper-level keys include fileConstraints, uiHints, propertyOrder", () => {

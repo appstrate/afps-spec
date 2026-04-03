@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 import semver from "semver";
+import Ajv2020 from "ajv/dist/2020";
 
 // ─────────────────────────────────────────────
 // Shared patterns and primitives
@@ -36,34 +37,58 @@ const semverRange = z.string().refine((v) => semver.validRange(v) !== null, {
 });
 
 // ─────────────────────────────────────────────
-// Schema system (§5)
+// Schema system (§5) — JSON Schema 2020-12 validation via AJV
 // ─────────────────────────────────────────────
 
-const fieldTypeEnum = z.enum(["string", "number", "boolean", "array", "object"]);
+const ajv = new Ajv2020({ strict: false });
 
-const schemaPropertyItems = z.looseObject({
-  type: fieldTypeEnum,
-  description: z.string().optional(),
-  format: z.string().optional(),
-  contentMediaType: z.string().optional(),
-});
+/** Sentinel description used to identify schemaObject during JSON Schema generation. */
+const AFPS_SCHEMA_SENTINEL = "__afps_jsonschema__";
 
-export const schemaProperty = z.looseObject({
-  type: fieldTypeEnum,
-  description: z.string().optional(),
-  default: z.unknown().optional(),
-  enum: z.array(z.unknown()).optional(),
-  format: z.string().optional(),
-  contentMediaType: z.string().optional(),
-  items: schemaPropertyItems.optional(),
-  maxItems: z.number().int().positive().optional(),
-});
+/** The JSON Schema representation for AFPS schema fields (allOf: meta-schema + AFPS constraint). */
+const AFPS_SCHEMA_OBJECT_JSON_SCHEMA = {
+  allOf: [
+    { $ref: "https://json-schema.org/draft/2020-12/schema" },
+    {
+      type: "object" as const,
+      required: ["type", "properties"],
+      properties: { type: { const: "object" } },
+    },
+  ],
+};
 
-export const schemaObject = z.looseObject({
-  type: z.literal("object"),
-  properties: z.record(z.string(), schemaProperty),
-  required: z.array(z.string()).optional(),
-});
+/**
+ * Validates that the value is a valid JSON Schema 2020-12 document,
+ * constrained to `type: "object"` with `properties` as required by AFPS.
+ *
+ * Tagged with a sentinel `.describe()` so `toJSONSchema()` override can emit
+ * a proper `$ref` to the official meta-schema instead of an opaque `{}`.
+ */
+export const schemaObject = z
+  .looseObject({})
+  .describe(AFPS_SCHEMA_SENTINEL)
+  .refine((val) => ajv.validateSchema(val) === true, () => ({
+    message: `Invalid JSON Schema: ${ajv.errorsText(ajv.errors)}`,
+  }))
+  .refine(
+    (val) => val.type === "object" && val.properties !== undefined,
+    { message: 'AFPS schemas must be type: "object" with properties' },
+  );
+
+/**
+ * Override callback for `z.toJSONSchema()` / `toJSONSchema()`.
+ * Detects schemas tagged with the AFPS sentinel description and replaces
+ * the generated output with a `$ref` to the JSON Schema 2020-12 meta-schema.
+ *
+ * Usage:
+ *   toJSONSchema(mySchema, { override: afpsJsonSchemaOverride, ... })
+ */
+export function afpsJsonSchemaOverride(ctx: { jsonSchema: Record<string, unknown> }): void {
+  if (ctx.jsonSchema.description === AFPS_SCHEMA_SENTINEL) {
+    for (const key of Object.keys(ctx.jsonSchema)) delete ctx.jsonSchema[key];
+    Object.assign(ctx.jsonSchema, AFPS_SCHEMA_OBJECT_JSON_SCHEMA);
+  }
+}
 
 const fileConstraint = z.looseObject({
   accept: z.string().optional(),

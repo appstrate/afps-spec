@@ -22,6 +22,7 @@ export {
   credentialsConfig,
   providerConfiguration,
   setupGuide,
-  schemaProperty,
   schemaObject,
+  // JSON Schema generation helper
+  afpsJsonSchemaOverride,
 } from "./schemas.ts";

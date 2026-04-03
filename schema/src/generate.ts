@@ -14,7 +14,7 @@
 import { toJSONSchema } from "zod/v4/core";
 import { resolve, dirname } from "node:path";
 import { writeFile, mkdir, readFile } from "node:fs/promises";
-import { createSchemas } from "./schemas.ts";
+import { createSchemas, afpsJsonSchemaOverride } from "./schemas.ts";
 
 const MAJOR = 1;
 const VERSION_TAG = `v${MAJOR}`;
@@ -71,6 +71,7 @@ for (const entry of entries) {
   const jsonSchema = toJSONSchema(entry.schema, {
     unrepresentable: "any",
     target: "draft-2020-12",
+    override: afpsJsonSchemaOverride,
   }) as Record<string, unknown>;
 
   delete jsonSchema.$schema;

@@ -577,75 +577,26 @@ A package MUST NOT declare a dependency on itself. Consumers SHOULD detect circu
 
 ## 5. Schema System
 
-AFPS uses a constrained JSON-object schema model rather than the full JSON Schema vocabulary. The container schema MUST be an object with `type: "object"` and a `properties` record. Property definitions are intentionally small and extensible.
+AFPS uses standard JSON Schema 2020-12 for property definitions within agent `input`, `output`, and `config` sections. The container schema MUST be an object with `type: "object"` and a `properties` record. Any valid JSON Schema 2020-12 keyword may be used within property definitions.
 
 ### 5.1 JSON Schema Properties
 
-All property definitions within an AFPS schema MUST be valid JSON Schema 2020-12. AFPS uses a constrained subset of the vocabulary:
+All property definitions within an AFPS schema MUST be valid JSON Schema 2020-12. The full JSON Schema vocabulary is supported, including composition keywords (`allOf`, `anyOf`, `oneOf`, `not`), conditional keywords (`if`/`then`/`else`), references (`$ref`, `$defs`), and all type-specific keywords.
 
-#### `type`
-- **Type**: string
-- **Required**: MUST
-- **Format**: one of `string`, `number`, `boolean`, `array`, `object`
-- **Description**: Declares the field kind. All values are standard JSON Schema types.
-- **Example**: `string`
-- **Default**: none
+The following keywords are commonly used in AFPS schemas:
 
-#### `description`
-- **Type**: string
-- **Required**: MAY
-- **Format**: free text
-- **Description**: Human-facing explanation of the field.
-- **Example**: `Search query`
-- **Default**: none
+| Keyword | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | string | MAY | Declares the field kind (`string`, `number`, `integer`, `boolean`, `array`, `object`). |
+| `description` | string | MAY | Human-facing explanation of the field. |
+| `default` | any | MAY | Suggested default value. |
+| `enum` | array | MAY | Enumerated allowed values. |
+| `format` | string | MAY | Formatting hint (`date-time`, `email`, `uri`, etc.). |
+| `contentMediaType` | string | MAY | IANA media type (RFC 2046). Used with `format: "uri"` to indicate file fields (see §5.2). |
+| `items` | object | MAY | Describes array items (when `type` is `array`). |
+| `maxItems` | integer | MAY | Maximum number of array items. |
 
-#### `default`
-- **Type**: any JSON value
-- **Required**: MAY
-- **Format**: unconstrained by the validator
-- **Description**: Suggested default value for a field.
-- **Example**: `20`
-- **Default**: none
-
-#### `enum`
-- **Type**: array
-- **Required**: MAY
-- **Format**: array of JSON values
-- **Description**: Enumerated allowed values.
-- **Example**: `["en", "fr"]`
-- **Default**: none
-
-#### `format`
-- **Type**: string
-- **Required**: MAY
-- **Format**: free text
-- **Description**: Optional formatting hint such as `date-time`, `email`, or `uri`.
-- **Example**: `uri`
-- **Default**: none
-
-#### `contentMediaType`
-- **Type**: string
-- **Required**: MAY
-- **Format**: IANA media type (RFC 2046)
-- **Description**: Declares the media type of the content the field represents. Used in conjunction with `format: "uri"` to indicate file fields (see §5.2).
-- **Example**: `application/octet-stream`
-- **Default**: none
-
-#### `items`
-- **Type**: object
-- **Required**: MAY (used when `type` is `array`)
-- **Format**: a JSON Schema property definition
-- **Description**: Describes the items within an array field.
-- **Example**: `{ "type": "string", "format": "uri", "contentMediaType": "application/octet-stream" }`
-- **Default**: none
-
-#### `maxItems`
-- **Type**: integer
-- **Required**: MAY (used when `type` is `array`)
-- **Format**: positive integer
-- **Description**: Maximum number of items in an array.
-- **Example**: `5`
-- **Default**: none
+This is not an exhaustive list. Any keyword defined by JSON Schema 2020-12 is valid within property definitions.
 
 ### 5.2 File Field Convention
 
@@ -692,9 +643,7 @@ It MAY also contain:
 
 - `required`: an array of property names.
 
-AFPS v1.0 uses a constrained subset of JSON Schema. Properties with `type: "object"` or `type: "array"` use standard `items` and `maxItems` keywords where applicable. Full JSON Schema composition keywords (`allOf`, `anyOf`, `oneOf`, `$ref`) are not part of the AFPS subset.
-
-Because the schema validator is extensible, consumers SHOULD preserve unknown property keywords that they do not understand.
+Property definitions support the full JSON Schema 2020-12 vocabulary, including composition (`allOf`, `anyOf`, `oneOf`), conditionals (`if`/`then`/`else`), and references (`$ref`, `$defs`). The schema validator validates property definitions against the official JSON Schema 2020-12 meta-schema.
 
 ### 5.4 Input, Output, and Config Schemas
 

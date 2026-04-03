@@ -392,28 +392,54 @@ describe("schema system (§5)", () => {
     });
   });
 
-  test("schema properties must have a type", () => {
-    expectInvalid(agentManifestSchema, {
+  test("schema properties without type are valid JSON Schema (inferred)", () => {
+    expectValid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
           type: "object",
           properties: {
-            field: { description: "missing type" },
+            field: { description: "no explicit type — valid per JSON Schema 2020-12" },
           },
         },
       },
     });
   });
 
-  test("unsupported field types are rejected", () => {
-    expectInvalid(agentManifestSchema, {
+  test("integer type is valid JSON Schema", () => {
+    expectValid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
           type: "object",
           properties: {
             field: { type: "integer" },
+          },
+        },
+      },
+    });
+  });
+
+  test("advanced JSON Schema features are accepted", () => {
+    expectValid(agentManifestSchema, {
+      ...base,
+      input: {
+        schema: {
+          type: "object",
+          properties: {
+            value: {
+              oneOf: [
+                { type: "string" },
+                { type: "number" },
+              ],
+            },
+            nested: {
+              type: "object",
+              properties: {
+                deep: { type: "string", minLength: 1 },
+              },
+              required: ["deep"],
+            },
           },
         },
       },
