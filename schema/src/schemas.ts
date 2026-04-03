@@ -67,9 +67,9 @@ const AFPS_SCHEMA_OBJECT_JSON_SCHEMA = {
 export const schemaObject = z
   .looseObject({})
   .describe(AFPS_SCHEMA_SENTINEL)
-  .refine((val) => ajv.validateSchema(val) === true, () => ({
-    message: `Invalid JSON Schema: ${ajv.errorsText(ajv.errors)}`,
-  }))
+  .refine((val) => ajv.validateSchema(val) === true, {
+    message: "Must be a valid JSON Schema 2020-12 document",
+  })
   .refine(
     (val) => val.type === "object" && val.properties !== undefined,
     { message: 'AFPS schemas must be type: "object" with properties' },
