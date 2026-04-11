@@ -22,7 +22,6 @@ export {
   credentialsConfig,
   oauthTokenAuthMethodEnum,
   oauthTokenContentTypeEnum,
-  credentialEncodingEnum,
   credentialTransform,
   credentialTransformEncodingEnum,
   providerConfiguration,

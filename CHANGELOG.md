@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.1.1 — 2026-04-11
+
+### Specification
+
+- **§7.4 Credential Schema** — removed `definition.credentialEncoding` and its associated enum entirely. The field had been introduced as an experimental closed enum in v1.0.2 and deprecated in v1.1.0 in favor of the generic `credentialTransform`. It is removed now because it had zero production adoption and keeping a deprecated parallel pathway in the spec added no value.
+- **Appendix A (conformance checklist)** — removed the `credentialEncoding` row.
+- Consumers that previously honored `credentialEncoding` MUST migrate to `credentialTransform`. The two standard patterns translate as:
+  - `basic_api_key_x` → `credentialTransform: { template: "{{api_key}}:X", encoding: "base64" }`
+  - `basic_email_token` → `credentialTransform: { template: "{{email}}/token:{{api_key}}", encoding: "base64" }`
+
+### Schema (`@afps-spec/schema@1.3.1`)
+
+- `providerDefinition` no longer accepts `credentialEncoding`.
+- `credentialEncodingEnum` export removed from `@afps-spec/schema`.
+- Regenerated `schema/v1/provider.schema.json`.
+- Patch version: pre-GA correction of a never-adopted experimental field; see note above.
+
+---
+
 ## v1.1.0 — 2026-04-11
 
 ### Specification
