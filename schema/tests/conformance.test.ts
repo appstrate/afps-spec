@@ -772,32 +772,7 @@ describe("provider authentication (§7)", () => {
     });
   });
 
-  // §7.4 — credentialEncoding
-  test("api_key credentialEncoding accepts both standard values", () => {
-    for (const enc of ["basic_api_key_x", "basic_email_token"] as const) {
-      expectValid(providerManifestSchema, {
-        ...base,
-        definition: {
-          authMode: "api_key",
-          credentials: { schema: {} },
-          credentialEncoding: enc,
-        },
-      });
-    }
-  });
-
-  test("api_key credentialEncoding rejects unknown values", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        credentialEncoding: "bearer_token",
-      },
-    });
-  });
-
-  // §7.4 — credentialTransform (generic replacement for credentialEncoding)
+  // §7.4 — credentialTransform
   test("api_key credentialTransform accepts base64 with multi-field template", () => {
     expectValid(providerManifestSchema, {
       ...base,
