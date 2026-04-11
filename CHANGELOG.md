@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.0.2 — 2026-04-10
+
+### Specification
+
+- **§7.2 OAuth2 Configuration** — documented two optional fields inside `definition.oauth2`:
+  - `tokenAuthMethod` (`client_secret_post` | `client_secret_basic`) — selects how OAuth2 client credentials are sent on the token endpoint per RFC 6749 §2.3.1.
+  - `tokenContentType` (`application/x-www-form-urlencoded` | `application/json`) — selects the body encoding of token endpoint requests. `application/json` enables interoperability with providers like Atlassian whose token endpoints do not accept form-urlencoded bodies.
+- **§7.4 Credential Schema** — documented the optional top-level `definition.credentialEncoding` field for `api_key` providers, with two standard values (`basic_api_key_x`, `basic_email_token`) covering the Freshdesk/Teamwork and Zendesk Basic-auth patterns.
+- **Appendix A (conformance checklist)** — added rows for the three new fields.
+- Backwards compatible: all three fields are optional and absent from earlier manifests continue to validate.
+
+### Schema (`@afps-spec/schema@1.2.2`)
+
+- `oauth2Config` gains `tokenAuthMethod` and `tokenContentType` optional fields.
+- `providerDefinition` gains `credentialEncoding` optional field.
+- Three new exported enums: `oauthTokenAuthMethodEnum`, `oauthTokenContentTypeEnum`, `credentialEncodingEnum`.
+- Regenerated `schema/v1/provider.schema.json`.
+
+---
+
 ## v1.0.1 — 2026-04-01
 
 ### Renamed

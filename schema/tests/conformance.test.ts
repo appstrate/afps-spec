@@ -711,6 +711,92 @@ describe("provider authentication (§7)", () => {
     });
   });
 
+  // §7.2 — tokenAuthMethod and tokenContentType
+  test("oauth2 tokenAuthMethod accepts both standard values", () => {
+    for (const method of ["client_secret_post", "client_secret_basic"] as const) {
+      expectValid(providerManifestSchema, {
+        ...base,
+        definition: {
+          authMode: "oauth2",
+          oauth2: {
+            authorizationUrl: "https://example.com/auth",
+            tokenUrl: "https://example.com/token",
+            tokenAuthMethod: method,
+          },
+        },
+      });
+    }
+  });
+
+  test("oauth2 tokenAuthMethod rejects unknown values", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "oauth2",
+        oauth2: {
+          authorizationUrl: "https://example.com/auth",
+          tokenUrl: "https://example.com/token",
+          tokenAuthMethod: "client_secret_jwt",
+        },
+      },
+    });
+  });
+
+  test("oauth2 tokenContentType accepts both standard values", () => {
+    for (const ct of ["application/x-www-form-urlencoded", "application/json"] as const) {
+      expectValid(providerManifestSchema, {
+        ...base,
+        definition: {
+          authMode: "oauth2",
+          oauth2: {
+            authorizationUrl: "https://example.com/auth",
+            tokenUrl: "https://example.com/token",
+            tokenContentType: ct,
+          },
+        },
+      });
+    }
+  });
+
+  test("oauth2 tokenContentType rejects unknown values", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "oauth2",
+        oauth2: {
+          authorizationUrl: "https://example.com/auth",
+          tokenUrl: "https://example.com/token",
+          tokenContentType: "text/plain",
+        },
+      },
+    });
+  });
+
+  // §7.4 — credentialEncoding
+  test("api_key credentialEncoding accepts both standard values", () => {
+    for (const enc of ["basic_api_key_x", "basic_email_token"] as const) {
+      expectValid(providerManifestSchema, {
+        ...base,
+        definition: {
+          authMode: "api_key",
+          credentials: { schema: {} },
+          credentialEncoding: enc,
+        },
+      });
+    }
+  });
+
+  test("api_key credentialEncoding rejects unknown values", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        credentialEncoding: "bearer_token",
+      },
+    });
+  });
+
   test("oauth1 optional fields accepted", () => {
     expectValid(providerManifestSchema, {
       ...base,

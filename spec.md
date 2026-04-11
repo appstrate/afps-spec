@@ -741,6 +741,17 @@ Required fields within `definition.oauth2`:
 - `definition.oauth2.authorizationUrl` MUST be present;
 - `definition.oauth2.tokenUrl` MUST be present.
 
+Optional fields within `definition.oauth2`:
+
+- `definition.oauth2.tokenAuthMethod` MAY be present. When present, it MUST be one of:
+  - `client_secret_post` (default) — client credentials are sent in the token request body, per RFC 6749 §2.3.1;
+  - `client_secret_basic` — client credentials are sent in an HTTP `Authorization: Basic` header, per RFC 6749 §2.3.1. Consumers that support this value MUST URL-encode the client id and secret before base64 encoding, as required by RFC 6749 §2.3.1.
+- `definition.oauth2.tokenContentType` MAY be present. When present, it MUST be one of:
+  - `application/x-www-form-urlencoded` (default) — token endpoint request body is URL-encoded, per RFC 6749 §4.1.3;
+  - `application/json` — token endpoint request body is a JSON object. This is required by some providers (e.g. Atlassian) whose token endpoints do not accept form-urlencoded bodies. Consumers MUST send a matching `Content-Type` header.
+
+Consumers MUST treat unknown values of `tokenAuthMethod` or `tokenContentType` as if the field were absent (i.e. fall back to the default).
+
 ### 7.3 OAuth1 Configuration
 
 For `oauth1` providers, `definition.oauth1` MUST be present. The `oauth1` sub-object is extensible: implementations MAY add additional properties for implementation-specific OAuth1 settings.
@@ -759,6 +770,14 @@ Required fields within `definition.credentials`:
 - `definition.credentials.schema` MUST be present.
 
 The `schema` object SHOULD follow the AFPS schema format defined in §5 (Schema System) — that is, `type: "object"` with a `properties` record — but the manifest validator accepts any JSON object. Each property defines a credential field the user must supply.
+
+Optional top-level field for `api_key` providers:
+
+- `definition.credentialEncoding` MAY be present for `api_key` authMode. When present, it instructs consumers to pre-encode the stored credentials into a single Basic-auth value before injecting them into requests. It MUST be one of:
+  - `basic_api_key_x` — the credential is encoded as `base64(api_key + ":X")`. Used by providers (e.g. Freshdesk, Teamwork) that accept a Basic-auth header whose username is the API key and whose password is the literal character `X`;
+  - `basic_email_token` — the credential is encoded as `base64(email + "/token:" + api_key)`. Used by providers (e.g. Zendesk) whose API-token Basic-auth scheme requires an `<email>/token` username suffix.
+
+Consumers that do not recognise a `credentialEncoding` value MUST treat the field as absent and pass the raw credentials through unchanged. Consumers that do recognise it SHOULD perform the encoding before the credentials leave the trusted boundary that handles decryption.
 
 ### 7.5 URI Restrictions
 
@@ -934,11 +953,14 @@ When an extension field gains broad adoption across multiple implementations, it
 | `definition.oauth2` | provider | object | MUST for oauth2 | extensible sub-object for OAuth2 configuration | none |
 | `definition.oauth2.authorizationUrl` | provider | string | MUST for oauth2 | URI recommended | none |
 | `definition.oauth2.tokenUrl` | provider | string | MUST for oauth2 | URI recommended | none |
+| `definition.oauth2.tokenAuthMethod` | provider | string | MAY | `client_secret_post` (default) or `client_secret_basic` (RFC 6749 §2.3.1) | none |
+| `definition.oauth2.tokenContentType` | provider | string | MAY | `application/x-www-form-urlencoded` (default, RFC 6749 §4.1.3) or `application/json` | none |
 | `definition.oauth1` | provider | object | MUST for oauth1 | extensible sub-object for OAuth1 configuration | none |
 | `definition.oauth1.requestTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
 | `definition.oauth1.accessTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
 | `definition.credentials` | provider | object | MUST for `api_key`, `basic`, `custom` | extensible sub-object for credential configuration | none |
 | `definition.credentials.schema` | provider | object | MUST for `api_key`, `basic`, `custom` | SHOULD follow AFPS schema format; validator accepts any object | none |
+| `definition.credentialEncoding` | provider | string | MAY for `api_key` | `basic_api_key_x` or `basic_email_token` — pre-encoding for Basic-auth vendor patterns (§7.4) | none |
 | `definition.authorizedUris` | provider | string[] | MAY | allowed upstream URI patterns | none |
 | `definition.allowAllUris` | provider | boolean | MAY | unrestricted upstream access | consumer-defined |
 | `definition.availableScopes` | provider | array | MAY | interoperable form is `{ value, label }[]` | none |

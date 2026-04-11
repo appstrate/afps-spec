@@ -142,10 +142,36 @@ const toolInterface = z.object({
 
 export const authModeEnum = z.enum(["oauth2", "oauth1", "api_key", "basic", "custom"]);
 
+/**
+ * How OAuth2 client credentials are sent on token endpoint requests.
+ * - `client_secret_post` (default): credentials in the request body per RFC 6749 §2.3.1.
+ * - `client_secret_basic`: credentials in an HTTP Basic `Authorization` header per RFC 6749 §2.3.1.
+ */
+export const oauthTokenAuthMethodEnum = z.enum(["client_secret_post", "client_secret_basic"]);
+
+/**
+ * Content-Type sent on OAuth2 token endpoint request bodies.
+ * - `application/x-www-form-urlencoded` (default, per RFC 6749 §4.1.3).
+ * - `application/json`: some providers (e.g. Atlassian) require a JSON body.
+ */
+export const oauthTokenContentTypeEnum = z.enum([
+  "application/x-www-form-urlencoded",
+  "application/json",
+]);
+
+/**
+ * Pre-encoding applied by the runtime to `api_key`-mode credentials before injection.
+ * - `basic_api_key_x`: base64(api_key + ":X") — Freshdesk / Teamwork pattern.
+ * - `basic_email_token`: base64(email + "/token:" + api_key) — Zendesk pattern.
+ */
+export const credentialEncodingEnum = z.enum(["basic_api_key_x", "basic_email_token"]);
+
 /** OAuth2 configuration sub-object. Required fields per §7.2; extensible for implementation-specific fields. */
 export const oauth2Config = z.looseObject({
   authorizationUrl: z.string(),
   tokenUrl: z.string(),
+  tokenAuthMethod: oauthTokenAuthMethodEnum.optional(),
+  tokenContentType: oauthTokenContentTypeEnum.optional(),
 });
 
 /** OAuth1 configuration sub-object. Required fields per §7.3; extensible for implementation-specific fields. */
@@ -164,6 +190,7 @@ export const providerDefinition = z.looseObject({
   oauth2: oauth2Config.optional(),
   oauth1: oauth1Config.optional(),
   credentials: credentialsConfig.optional(),
+  credentialEncoding: credentialEncodingEnum.optional(),
   authorizedUris: z.array(z.string()).optional(),
   allowAllUris: z.boolean().optional(),
   availableScopes: z.array(z.unknown()).optional(),
