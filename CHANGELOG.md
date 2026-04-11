@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.1.0 — 2026-04-11
+
+### Specification
+
+- **§7.4 Credential Schema** — introduced the generic, template-based `definition.credentialTransform` (`{ template, encoding }`) as the successor to the fixed `credentialEncoding` enum. Manifests now express provider-specific Basic-auth conventions directly (e.g. Freshdesk/Teamwork `{ template: "{{api_key}}:X", encoding: "base64" }`, Zendesk `{ template: "{{email}}/token:{{api_key}}", encoding: "base64" }`) instead of relying on hard-coded runtime enum values. Adding a new vendor convention no longer requires bumping the spec — only a new `encoding` does.
+- **`credentialEncoding` is deprecated** but retained in the schema for backward compatibility. Consumers MAY continue to honor it; new manifests SHOULD use `credentialTransform`. When both are present, `credentialTransform` takes precedence.
+- **Appendix A (conformance checklist)** — added rows for `credentialTransform`, `credentialTransform.template`, `credentialTransform.encoding`; marked `credentialEncoding` deprecated.
+- Backwards compatible: existing manifests using `credentialEncoding` still validate and still work on every conforming consumer.
+
+### Schema (`@afps-spec/schema@1.3.0`)
+
+- `providerDefinition` gains `credentialTransform` optional field (`{ template: string, encoding: "base64" }`).
+- Two new exports: `credentialTransform` Zod schema and `credentialTransformEncodingEnum`.
+- Regenerated `schema/v1/provider.schema.json`.
+- Minor version bump (purely additive — all new fields are optional).
+
+---
+
 ## v1.0.2 — 2026-04-10
 
 ### Specification

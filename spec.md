@@ -771,13 +771,27 @@ Required fields within `definition.credentials`:
 
 The `schema` object SHOULD follow the AFPS schema format defined in §5 (Schema System) — that is, `type: "object"` with a `properties` record — but the manifest validator accepts any JSON object. Each property defines a credential field the user must supply.
 
-Optional top-level field for `api_key` providers:
+Optional top-level fields for `api_key` providers:
 
-- `definition.credentialEncoding` MAY be present for `api_key` authMode. When present, it instructs consumers to pre-encode the stored credentials into a single Basic-auth value before injecting them into requests. It MUST be one of:
-  - `basic_api_key_x` — the credential is encoded as `base64(api_key + ":X")`. Used by providers (e.g. Freshdesk, Teamwork) that accept a Basic-auth header whose username is the API key and whose password is the literal character `X`;
-  - `basic_email_token` — the credential is encoded as `base64(email + "/token:" + api_key)`. Used by providers (e.g. Zendesk) whose API-token Basic-auth scheme requires an `<email>/token` username suffix.
+- `definition.credentialTransform` MAY be present for `api_key` authMode. When present, it instructs consumers to replace the injected credential value with a templated, transformed string. It is an object with two required fields:
+  - `template` MUST be a non-empty string. It is rendered by substituting `{{field}}` placeholders with the values stored under the corresponding keys in the user-provided credentials. The same substitution engine used for `authorizedUris`, `credentialHeaderPrefix` and proxied URLs is reused.
+  - `encoding` MUST be a known post-substitution transform applied to the rendered template. AFPS v1 defines a single value: `base64` (RFC 4648 §4). New encodings require a minor version bump of this spec. Consumers MUST reject manifests using an unknown encoding.
 
-Consumers that do not recognise a `credentialEncoding` value MUST treat the field as absent and pass the raw credentials through unchanged. Consumers that do recognise it SHOULD perform the encoding before the credentials leave the trusted boundary that handles decryption.
+  The resulting string replaces the value stored under `credentials.fieldName` (default `api_key`) at injection time; other credential fields are preserved so they remain available for URL and header substitution (e.g. `{{subdomain}}`, `{{email}}`). The transform MUST be evaluated inside the trusted boundary that handles credential decryption.
+
+  Two common Basic-auth patterns are expressible without any enum extension:
+  - Freshdesk / Teamwork (`api_key` username, literal `X` password):
+    `{ template: "{{api_key}}:X", encoding: "base64" }`
+  - Zendesk (`<email>/token` username, API token password):
+    `{ template: "{{email}}/token:{{api_key}}", encoding: "base64" }`
+
+- `definition.credentialEncoding` (deprecated since 1.3.0, superseded by `credentialTransform`) MAY be present for `api_key` authMode. When present, it instructs consumers to pre-encode the stored credentials into a single Basic-auth value before injecting them into requests. It MUST be one of:
+  - `basic_api_key_x` — equivalent to `credentialTransform: { template: "{{api_key}}:X", encoding: "base64" }`;
+  - `basic_email_token` — equivalent to `credentialTransform: { template: "{{email}}/token:{{api_key}}", encoding: "base64" }`.
+
+  New manifests SHOULD use `credentialTransform` instead. Consumers MAY continue to honor `credentialEncoding` for existing providers but SHOULD NOT emit it for new ones. If both `credentialTransform` and `credentialEncoding` are present, `credentialTransform` takes precedence.
+
+Consumers that do not recognise a `credentialEncoding` value MUST treat the field as absent and pass the raw credentials through unchanged.
 
 ### 7.5 URI Restrictions
 
@@ -960,7 +974,10 @@ When an extension field gains broad adoption across multiple implementations, it
 | `definition.oauth1.accessTokenUrl` | provider | string | MUST for oauth1 | URI recommended | none |
 | `definition.credentials` | provider | object | MUST for `api_key`, `basic`, `custom` | extensible sub-object for credential configuration | none |
 | `definition.credentials.schema` | provider | object | MUST for `api_key`, `basic`, `custom` | SHOULD follow AFPS schema format; validator accepts any object | none |
-| `definition.credentialEncoding` | provider | string | MAY for `api_key` | `basic_api_key_x` or `basic_email_token` — pre-encoding for Basic-auth vendor patterns (§7.4) | none |
+| `definition.credentialEncoding` | provider | string | MAY for `api_key` | **deprecated since 1.3.0** — `basic_api_key_x` or `basic_email_token`; prefer `credentialTransform` (§7.4) | none |
+| `definition.credentialTransform` | provider | object | MAY for `api_key` | `{ template, encoding }` — generic pre-encoding for Basic-auth vendor patterns (§7.4) | none |
+| `definition.credentialTransform.template` | provider | string | MUST if transform present | non-empty, `{{var}}` substitution over credential fields | none |
+| `definition.credentialTransform.encoding` | provider | string | MUST if transform present | `base64` (AFPS v1) | none |
 | `definition.authorizedUris` | provider | string[] | MAY | allowed upstream URI patterns | none |
 | `definition.allowAllUris` | provider | boolean | MAY | unrestricted upstream access | consumer-defined |
 | `definition.availableScopes` | provider | array | MAY | interoperable form is `{ value, label }[]` | none |

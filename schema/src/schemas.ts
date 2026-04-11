@@ -160,11 +160,50 @@ export const oauthTokenContentTypeEnum = z.enum([
 ]);
 
 /**
- * Pre-encoding applied by the runtime to `api_key`-mode credentials before injection.
- * - `basic_api_key_x`: base64(api_key + ":X") — Freshdesk / Teamwork pattern.
- * - `basic_email_token`: base64(email + "/token:" + api_key) — Zendesk pattern.
+ * @deprecated since 1.3.0 — use {@link credentialTransform} instead.
+ *
+ * Fixed, runtime-specific enum of pre-encodings. Superseded by the generic
+ * `credentialTransform` (template + encoding), which lets manifests express
+ * any provider-specific Basic-auth convention without adding new enum values.
+ *
+ * Kept in the schema for backward compatibility; implementations MAY continue
+ * to honor it but SHOULD prefer `credentialTransform` for new providers.
  */
 export const credentialEncodingEnum = z.enum(["basic_api_key_x", "basic_email_token"]);
+
+/**
+ * Whitelisted post-substitution transforms applied to the rendered
+ * `credentialTransform.template` before the result is injected as the
+ * provider credential. Pure, deterministic, pre-image-free functions only.
+ *
+ * - `base64`: standard RFC 4648 §4 encoding.
+ *
+ * New encodings require a minor version bump of this spec. Implementations
+ * MUST reject manifests using an unknown encoding.
+ */
+export const credentialTransformEncodingEnum = z.enum(["base64"]);
+
+/**
+ * Generic, template-based replacement for {@link credentialEncodingEnum}.
+ *
+ * `template` is rendered by substituting `{{field}}` placeholders with values
+ * from the user-provided credentials (the same substitution engine used for
+ * URLs and headers). The rendered string is then passed through `encoding`.
+ *
+ * Examples:
+ * - Zendesk API token pattern:
+ *   `{ template: "{{email}}/token:{{api_key}}", encoding: "base64" }`
+ * - Freshdesk / Teamwork "password placeholder" pattern:
+ *   `{ template: "{{api_key}}:X", encoding: "base64" }`
+ *
+ * The transformed value replaces `credentials.fieldName` at injection time;
+ * other credential fields are preserved for URL/header substitution
+ * (`{{subdomain}}`, `{{email}}`, …).
+ */
+export const credentialTransform = z.looseObject({
+  template: z.string().min(1),
+  encoding: credentialTransformEncodingEnum,
+});
 
 /** OAuth2 configuration sub-object. Required fields per §7.2; extensible for implementation-specific fields. */
 export const oauth2Config = z.looseObject({
@@ -191,6 +230,7 @@ export const providerDefinition = z.looseObject({
   oauth1: oauth1Config.optional(),
   credentials: credentialsConfig.optional(),
   credentialEncoding: credentialEncodingEnum.optional(),
+  credentialTransform: credentialTransform.optional(),
   authorizedUris: z.array(z.string()).optional(),
   allowAllUris: z.boolean().optional(),
   availableScopes: z.array(z.unknown()).optional(),

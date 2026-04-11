@@ -23,6 +23,8 @@ export {
   oauthTokenAuthMethodEnum,
   oauthTokenContentTypeEnum,
   credentialEncodingEnum,
+  credentialTransform,
+  credentialTransformEncodingEnum,
   providerConfiguration,
   setupGuide,
   schemaObject,
