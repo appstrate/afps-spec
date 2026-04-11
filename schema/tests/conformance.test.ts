@@ -797,6 +797,76 @@ describe("provider authentication (§7)", () => {
     });
   });
 
+  // §7.4 — credentialTransform (generic replacement for credentialEncoding)
+  test("api_key credentialTransform accepts base64 with multi-field template", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        credentialTransform: {
+          template: "{{email}}/token:{{api_key}}",
+          encoding: "base64",
+        },
+      },
+    });
+  });
+
+  test("api_key credentialTransform accepts base64 with literal suffix", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        credentialTransform: {
+          template: "{{api_key}}:X",
+          encoding: "base64",
+        },
+      },
+    });
+  });
+
+  test("api_key credentialTransform rejects unknown encoding", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        credentialTransform: {
+          template: "{{api_key}}",
+          encoding: "rot13",
+        },
+      },
+    });
+  });
+
+  test("api_key credentialTransform rejects empty template", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        credentialTransform: {
+          template: "",
+          encoding: "base64",
+        },
+      },
+    });
+  });
+
+  test("api_key credentialTransform rejects missing encoding", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        credentialTransform: {
+          template: "{{api_key}}",
+        },
+      },
+    });
+  });
+
   test("oauth1 optional fields accepted", () => {
     expectValid(providerManifestSchema, {
       ...base,
