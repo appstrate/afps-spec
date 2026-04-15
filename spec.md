@@ -630,6 +630,8 @@ AFPS represents file upload fields using standard JSON Schema types rather than 
 
 At runtime, the field value is a URI reference to the uploaded file. The `contentMediaType` value MAY be `application/octet-stream` (any file type) or a more specific media type such as `application/pdf`.
 
+The URI scheme is consumer-defined. A consumer MAY use `http(s)://` for direct references, `data:` for inline content, or a private scheme (for example `upload://upl_xxx`) to denote a pre-uploaded blob managed by the consumer. Consumers MUST resolve the URI to the actual file bytes before passing the value to an agent at run time.
+
 Upload constraints such as accepted file extensions and maximum file size are not JSON Schema concerns. They are declared in the `fileConstraints` section of the schema wrapper (see §5.4).
 
 ### 5.3 Schema Object Structure
