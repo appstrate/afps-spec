@@ -2,6 +2,12 @@
 
 ## v1.3.0 — 2026-04-21
 
+### Platform tool packages
+
+- **Five reserved-domain tools ship as standalone npm packages** — `@afps/memory`, `@afps/state`, `@afps/output`, `@afps/report`, `@afps/log`. Each exposes a default-exported `Tool` conforming to `@afps-spec/schema/interfaces` and emits its canonical open-envelope `RunEvent` (`memory.added`, `state.set`, `output.emitted`, `report.appended`, `log.written`).
+- **`@afps/platform-compat`** — aggregates the five into a single `Record<toolName, Tool>`, intended for runners that auto-inject platform tools into pre-1.3 bundles whose manifests never declared them as explicit dependencies.
+- Packages live under `afps-spec/packages/` and share the spec's Apache-2.0 license for the code (the spec document itself remains CC-BY-4.0).
+
 ### Specification
 
 - **Runtime interfaces formalized** — the spec now publishes a normative TypeScript surface (`Tool`, `ToolContext`, `ToolResult`, `RunEvent`, `ToolResolver`, `ProviderResolver`, `SkillResolver`, `PreludeResolver`, `EventSink`, `RunResult`) so that AFPS-compliant runtimes and runners share a single vocabulary. Previously each runtime had to invent its own; the surface was effectively defined by whatever the reference runtime (`@appstrate/afps-runtime`) happened to export, and names collided with spec vocabulary (the legacy `CredentialProvider` versus AFPS "provider" packages).
