@@ -261,6 +261,24 @@ export function createSchemas(majorVersion: number) {
     dependencies: dependenciesSchema,
   };
 
+  /**
+   * systemPreludes (schemaVersion 1.2+) — ordered list of prelude packages
+   * whose prompt.md is deterministically concatenated before the agent's
+   * own prompt.md at render time. Non-negotiable composition (not a skill
+   * — the LLM has no opt-out). Version is a semver range the resolver
+   * matches against a published artifact.
+   */
+  const systemPrelude = z.object({
+    name: scopedName,
+    version: semverRange,
+  });
+
+  const systemPreludesSchema = z
+    .array(systemPrelude)
+    .describe(
+      "Packages whose prompt.md is deterministically concatenated before the agent's own prompt.md at render time. Ordered, logic-less, non-negotiable — the runtime guarantees inclusion regardless of LLM behaviour. Use for platform-identity context (environment, available-tools summary, provider catalogue) that every run on a given platform MUST see. Introduced in schemaVersion 1.2.",
+    );
+
   const agentManifestSchema = z.looseObject({
     ...commonFields,
     type: z.literal("agent"),
@@ -272,6 +290,7 @@ export function createSchemas(majorVersion: number) {
     output: schemaWrapper.optional(),
     config: schemaWrapper.optional(),
     timeout: z.number().positive().optional(),
+    systemPreludes: systemPreludesSchema.optional(),
   });
 
   const skillManifestSchema = z.looseObject({

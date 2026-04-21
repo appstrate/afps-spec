@@ -575,6 +575,42 @@ describe("execution model (§6)", () => {
     expectInvalid(agentManifestSchema, { ...base, timeout: 0 });
     expectInvalid(agentManifestSchema, { ...base, timeout: -1 });
   });
+
+  test("systemPreludes is optional (schemaVersion 1.2+)", () => {
+    expectValid(agentManifestSchema, { ...base });
+    expectValid(agentManifestSchema, {
+      ...base,
+      schemaVersion: "1.2",
+      systemPreludes: [{ name: "@acme/environment", version: "^1.0.0" }],
+    });
+  });
+
+  test("systemPreludes entries enforce scoped names + semver ranges", () => {
+    expectInvalid(agentManifestSchema, {
+      ...base,
+      systemPreludes: [{ name: "no-scope", version: "1.0.0" }],
+    });
+    expectInvalid(agentManifestSchema, {
+      ...base,
+      systemPreludes: [{ name: "@acme/env", version: "not-a-semver-range" }],
+    });
+    expectInvalid(agentManifestSchema, {
+      ...base,
+      systemPreludes: [{ name: "@acme/env" /* missing version */ }],
+    });
+  });
+
+  test("systemPreludes accepts multiple ordered entries", () => {
+    expectValid(agentManifestSchema, {
+      ...base,
+      schemaVersion: "1.2",
+      systemPreludes: [
+        { name: "@acme/environment", version: "^1.0.0" },
+        { name: "@acme/security-policy", version: "~2.0" },
+        { name: "@acme/observability", version: "3.x" },
+      ],
+    });
+  });
 });
 
 // ─────────────────────────────────────────────

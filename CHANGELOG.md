@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.2.0 — 2026-04-21
+
+### Specification
+
+- **Agent manifest — `systemPreludes`** — new optional field on agent manifests (schemaVersion 1.2+). Declares an ordered list of `{ name, version }` packages whose `prompt.md` is deterministically concatenated before the agent's own `prompt.md` at render time. Unlike skills (which the LLM consumes on-demand), preludes are a non-negotiable composition primitive: the runtime guarantees inclusion regardless of LLM behaviour. Use for platform-identity context (environment description, tools summary, provider catalogue) that every run on a given platform MUST see.
+- Rationale: previously the only way to inject platform-identity context was via skills (LLM-optional) or via an opaque private pre-processor (not portable). `systemPreludes` gives platforms a first-class, shareable, versionable primitive — any consumer can reproduce a platform's execution environment by declaring the same prelude, rather than cloning string-building code.
+
+### Schema (`@afps-spec/schema@1.4.0`)
+
+- `agentManifestSchema` gains an optional `systemPreludes` field: `Array<{ name: scopedName, version: semverRange }>`.
+- Regenerated `schema/v1/agent.schema.json`.
+- Minor bump: additive, non-breaking for 1.0 / 1.1 manifests.
+
+---
+
 ## v1.1.1 — 2026-04-11
 
 ### Specification

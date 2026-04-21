@@ -306,6 +306,27 @@
     "timeout": {
       "type": "number",
       "exclusiveMinimum": 0
+    },
+    "systemPreludes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Packages whose prompt.md is deterministically concatenated before the agent's own prompt.md at render time. Ordered, logic-less, non-negotiable — the runtime guarantees inclusion regardless of LLM behaviour. Use for platform-identity context (environment, available-tools summary, provider catalogue) that every run on a given platform MUST see. Introduced in schemaVersion 1.2."
     }
   },
   "required": [
