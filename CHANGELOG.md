@@ -4,15 +4,12 @@
 
 ### Specification
 
-- **Tool protocol formalized** — the spec now publishes a normative TypeScript surface (`Tool`, `ToolContext`, `ToolResult`) describing the contract every AFPS tool implementation MUST satisfy to be loadable by any AFPS-compliant runtime. Previously each runtime defined its own tool shape; canonicalising this here ensures tool packages (including third-party tools) are portable across runtimes.
-- **`RunEvent` is an open envelope** — `{ type: string, timestamp, runId, toolCallId?, [key]: unknown }`. The `type` field is an open discriminant (`"<domain>.<verb>"`) so third-party tool packages can emit their own events without amending the spec. Core AFPS domains (`memory`, `state`, `output`, `report`, `log`, `provider`) are reserved.
 - **`systemPrelude.optional`** — new boolean on each `systemPreludes[]` entry. Enables dual-target agents that run on both a specific platform (e.g. `@appstrate/platform`) and elsewhere by marking platform-specific preludes as optional. Absent/false means missing preludes MUST fail the run fail-closed (current behaviour). Runtimes older than 1.3 that encounter `optional` SHOULD treat it as required (safe default).
+- **Tool protocol + RunEvent wire envelope** documented in `spec.md` §8 as language-agnostic contracts. TypeScript bindings (`Tool`, `ToolContext`, `ToolResult`, `RunEvent`, manifest refs) are published separately as [`@afps/types`](https://github.com/appstrate/appstrate/tree/main/packages/afps/types) — the spec repo stays language-neutral.
+- Runtime-internal TypeScript interfaces (bundle loader APIs, resolver interfaces, sink interfaces, aggregated run state) live in the runtime package that owns the implementation (e.g. `@appstrate/afps-runtime`). They describe how a specific TypeScript runtime wires itself up internally, not contracts shared across the ecosystem.
 
-Runtime-internal TypeScript types (`Bundle`, `ToolResolver`, `ProviderResolver`, `SkillResolver`, `PreludeResolver`, `EventSink`, `RunResult`, `ResolvedSkill`, `ResolvedPrelude`) live in the runtime package that owns the implementation (e.g. `@appstrate/afps-runtime`). They describe how a specific TypeScript runtime wires itself up internally, not a contract shared across the ecosystem, so publishing them here would misrepresent their scope.
+### Schema (`@afps-spec/schema@1.4.0`)
 
-### Schema (`@afps-spec/schema@1.5.0`)
-
-- New module `@afps-spec/schema/interfaces` (also re-exported from `@afps-spec/schema`) with `Tool`, `ToolContext`, `ToolResult`, `RunEvent`, and the `DependencyRef` family (`ToolRef`, `ProviderRef`, `SkillRef`, `PreludeRef`).
 - `systemPrelude` gains an optional `optional: boolean` field.
 - Regenerated `schema/v1/agent.schema.json`.
 - Minor bump: additive, non-breaking for 1.0–1.2 manifests.

@@ -2,10 +2,15 @@
 // Copyright (c) 2026 Appstrate contributors
 
 /**
- * @afps/schema — AFPS Zod schemas for manifest validation.
+ * @afps-spec/schema — AFPS Zod schemas for manifest validation.
  *
  * Default exports are AFPS v1 schemas. Use createSchemas(majorVersion)
  * to generate schemas for a specific version.
+ *
+ * TypeScript bindings for the runtime contracts defined in spec.md §8
+ * (Tool protocol, RunEvent wire envelope, manifest refs) are published
+ * separately as `@afps/types` — this package stays focused on the
+ * manifest-format schemas.
  */
 
 export {
@@ -30,19 +35,3 @@ export {
   // JSON Schema generation helper
   afpsJsonSchemaOverride,
 } from "./schemas.ts";
-
-// Spec-level TypeScript contracts (schemaVersion 1.3+) — see ./interfaces.ts
-// Runtime-internal types (Bundle, *Resolver, EventSink, RunResult) live in the
-// runtime package that owns the implementation (e.g. @appstrate/afps-runtime).
-export type {
-  DependencyRef,
-  ToolRef,
-  ProviderRef,
-  SkillRef,
-  PreludeRef,
-  JSONSchema,
-  Tool,
-  ToolContext,
-  ToolResult,
-  RunEvent,
-} from "./interfaces.ts";
