@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "AFPS specification, schema, and reference platform-tool packages.",
+  "description": "AFPS specification and schema.",
   "license": "CC-BY-4.0",
-  "workspaces": ["schema", "packages/*"],
+  "workspaces": ["schema"],
   "scripts": {
     "test": "cd schema && bun test"
   }

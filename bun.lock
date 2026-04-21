@@ -5,79 +5,6 @@
     "": {
       "name": "afps-spec-monorepo",
     },
-    "packages/log": {
-      "name": "@afps/log",
-      "version": "1.0.0",
-      "devDependencies": {
-        "@afps-spec/schema": "workspace:*",
-        "bun-types": "^1.3.10",
-      },
-      "peerDependencies": {
-        "@afps-spec/schema": "^1.5.0",
-      },
-    },
-    "packages/memory": {
-      "name": "@afps/memory",
-      "version": "1.0.0",
-      "devDependencies": {
-        "@afps-spec/schema": "workspace:*",
-        "bun-types": "^1.3.10",
-      },
-      "peerDependencies": {
-        "@afps-spec/schema": "^1.5.0",
-      },
-    },
-    "packages/output": {
-      "name": "@afps/output",
-      "version": "1.0.0",
-      "devDependencies": {
-        "@afps-spec/schema": "workspace:*",
-        "bun-types": "^1.3.10",
-      },
-      "peerDependencies": {
-        "@afps-spec/schema": "^1.5.0",
-      },
-    },
-    "packages/platform-compat": {
-      "name": "@afps/platform-compat",
-      "version": "1.0.0",
-      "dependencies": {
-        "@afps/log": "1.0.0",
-        "@afps/memory": "1.0.0",
-        "@afps/output": "1.0.0",
-        "@afps/report": "1.0.0",
-        "@afps/state": "1.0.0",
-      },
-      "devDependencies": {
-        "@afps-spec/schema": "workspace:*",
-        "bun-types": "^1.3.10",
-      },
-      "peerDependencies": {
-        "@afps-spec/schema": "^1.5.0",
-      },
-    },
-    "packages/report": {
-      "name": "@afps/report",
-      "version": "1.0.0",
-      "devDependencies": {
-        "@afps-spec/schema": "workspace:*",
-        "bun-types": "^1.3.10",
-      },
-      "peerDependencies": {
-        "@afps-spec/schema": "^1.5.0",
-      },
-    },
-    "packages/state": {
-      "name": "@afps/state",
-      "version": "1.0.0",
-      "devDependencies": {
-        "@afps-spec/schema": "workspace:*",
-        "bun-types": "^1.3.10",
-      },
-      "peerDependencies": {
-        "@afps-spec/schema": "^1.5.0",
-      },
-    },
     "schema": {
       "name": "@afps-spec/schema",
       "version": "1.5.0",
@@ -94,18 +21,6 @@
   },
   "packages": {
     "@afps-spec/schema": ["@afps-spec/schema@workspace:schema"],
-
-    "@afps/log": ["@afps/log@workspace:packages/log"],
-
-    "@afps/memory": ["@afps/memory@workspace:packages/memory"],
-
-    "@afps/output": ["@afps/output@workspace:packages/output"],
-
-    "@afps/platform-compat": ["@afps/platform-compat@workspace:packages/platform-compat"],
-
-    "@afps/report": ["@afps/report@workspace:packages/report"],
-
-    "@afps/state": ["@afps/state@workspace:packages/state"],
 
     "@types/node": ["@types/node@25.6.0", "", { "dependencies": { "undici-types": "~7.19.0" } }, "sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ=="],
 
