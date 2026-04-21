@@ -611,6 +611,26 @@ describe("execution model (§6)", () => {
       ],
     });
   });
+
+  test("systemPreludes accepts optional flag (schemaVersion 1.3+)", () => {
+    expectValid(agentManifestSchema, {
+      ...base,
+      schemaVersion: "1.3",
+      systemPreludes: [
+        { name: "@afps/environment", version: "^2.0.0" },
+        { name: "@appstrate/platform", version: "^1.0.0", optional: true },
+        { name: "@acme/debug", version: "^1", optional: false },
+      ],
+    });
+  });
+
+  test("systemPreludes optional flag must be a boolean when present", () => {
+    expectInvalid(agentManifestSchema, {
+      ...base,
+      schemaVersion: "1.3",
+      systemPreludes: [{ name: "@acme/env", version: "^1", optional: "yes" }],
+    });
+  });
 });
 
 // ─────────────────────────────────────────────

@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.3.0 — 2026-04-21
+
+### Specification
+
+- **Runtime interfaces formalized** — the spec now publishes a normative TypeScript surface (`Tool`, `ToolContext`, `ToolResult`, `RunEvent`, `ToolResolver`, `ProviderResolver`, `SkillResolver`, `PreludeResolver`, `EventSink`, `RunResult`) so that AFPS-compliant runtimes and runners share a single vocabulary. Previously each runtime had to invent its own; the surface was effectively defined by whatever the reference runtime (`@appstrate/afps-runtime`) happened to export, and names collided with spec vocabulary (the legacy `CredentialProvider` versus AFPS "provider" packages).
+- **`RunEvent` is an open envelope** — `{ type: string, timestamp, runId, toolCallId?, [key]: unknown }`. The `type` field is an open discriminant (`"<domain>.<verb>"`) so third-party tool packages can emit their own events without amending the spec. Core AFPS domains (`memory`, `state`, `output`, `report`, `log`, `provider`) are reserved.
+- **`systemPrelude.optional`** — new boolean on each `systemPreludes[]` entry. Enables dual-target agents that run on both a specific platform (e.g. `@appstrate/platform`) and elsewhere by marking platform-specific preludes as optional. Absent/false means missing preludes MUST fail the run fail-closed (current behaviour). Runtimes older than 1.3 that encounter `optional` SHOULD treat it as required (safe default).
+
+### Schema (`@afps-spec/schema@1.5.0`)
+
+- New module `@afps-spec/schema/interfaces` (also re-exported from `@afps-spec/schema`) with the types listed above.
+- `systemPrelude` gains an optional `optional: boolean` field.
+- Regenerated `schema/v1/agent.schema.json`.
+- Minor bump: additive, non-breaking for 1.0–1.2 manifests.
+
+---
+
 ## v1.2.0 — 2026-04-21
 
 ### Specification

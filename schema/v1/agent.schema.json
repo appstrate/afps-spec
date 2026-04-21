@@ -318,6 +318,9 @@
           },
           "version": {
             "type": "string"
+          },
+          "optional": {
+            "type": "boolean"
           }
         },
         "required": [

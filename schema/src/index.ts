@@ -30,3 +30,26 @@ export {
   // JSON Schema generation helper
   afpsJsonSchemaOverride,
 } from "./schemas.ts";
+
+// Runtime interfaces (schemaVersion 1.3+) — see ./interfaces.ts
+export type {
+  Bundle,
+  DependencyRef,
+  ToolRef,
+  ProviderRef,
+  SkillRef,
+  PreludeRef,
+  JSONSchema,
+  Tool,
+  ToolContext,
+  ToolResult,
+  RunEvent,
+  ToolResolver,
+  ProviderResolver,
+  ResolvedSkill,
+  SkillResolver,
+  ResolvedPrelude,
+  PreludeResolver,
+  RunResult,
+  EventSink,
+} from "./interfaces.ts";

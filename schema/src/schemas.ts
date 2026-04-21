@@ -267,10 +267,17 @@ export function createSchemas(majorVersion: number) {
    * own prompt.md at render time. Non-negotiable composition (not a skill
    * — the LLM has no opt-out). Version is a semver range the resolver
    * matches against a published artifact.
+   *
+   * `optional` (schemaVersion 1.3+) — when true, a runner MAY silently skip
+   * this prelude if it cannot be resolved in the current environment (e.g.
+   * `@appstrate/platform` running outside Appstrate). Absent/false means
+   * missing preludes MUST fail the run fail-closed. Runtimes older than
+   * 1.3 that encounter `optional` SHOULD treat it as required (safe).
    */
   const systemPrelude = z.object({
     name: scopedName,
     version: semverRange,
+    optional: z.boolean().optional(),
   });
 
   const systemPreludesSchema = z
