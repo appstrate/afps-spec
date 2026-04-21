@@ -2,38 +2,32 @@
 // Copyright (c) 2026 Appstrate contributors
 
 /**
- * AFPS Runtime Interfaces (schemaVersion 1.3+)
+ * AFPS Runtime Contracts (schemaVersion 1.3+)
  *
- * Vendor-neutral interfaces that any AFPS-compliant runtime must expose
- * to its runners. The spec defines the shape; the runtime supplies default
- * implementations for the "internal" resolvers (Bundled*), and runners
- * provide their own "external" resolvers (ProviderResolver + EventSink).
+ * TypeScript bindings for the contracts defined in ../spec.md. The types
+ * exported here are spec-level — they describe the shape every
+ * AFPS-compliant TypeScript tool, runtime, and runner must agree on:
  *
- * Source of truth: ../spec.md §8 (Runtime Interfaces)
+ *   - Manifest refs (`DependencyRef`, `ToolRef`, …) — parallel to the
+ *     Zod schemas in `./schemas.ts`.
+ *   - Tool protocol (`Tool`, `ToolContext`, `ToolResult`) — the shape
+ *     every AFPS tool implementation MUST satisfy to be invoked by any
+ *     AFPS-compliant runtime.
+ *   - Wire envelope (`RunEvent`) — the open event shape flowing from
+ *     tools to sinks, regardless of runtime or transport.
+ *
+ * Types that describe how a *specific* runtime wires itself up
+ * internally (how a bundle is loaded in memory, how resolvers dispatch,
+ * how sinks are composed) deliberately DO NOT live here — they belong
+ * to the runtime package that owns the implementation
+ * (e.g. `@appstrate/afps-runtime`).
+ *
+ * Source of truth: ../spec.md §8 (Runtime Interfaces).
  */
 
 // ─────────────────────────────────────────────
-// Primitives shared across interfaces
+// Manifest refs — parallel to the Zod schemas in ./schemas.ts
 // ─────────────────────────────────────────────
-
-/**
- * Minimal view of a loaded bundle passed to resolvers.
- *
- * Concrete runtime implementations may expose a richer shape, but every
- * AFPS-compliant runtime MUST at least satisfy this surface.
- */
-export interface Bundle {
-  /** Parsed agent manifest (agent.afps.yaml). */
-  manifest: unknown;
-  /** Digest of the bundle (SHA-256 hex) — used for signing and cache keys. */
-  digest: string;
-  /** Read a file from the bundle by relative path (e.g. "prompt.md"). */
-  read(path: string): Promise<Uint8Array>;
-  /** Read a file as UTF-8 text. */
-  readText(path: string): Promise<string>;
-  /** Check whether a file exists in the bundle. */
-  exists(path: string): Promise<boolean>;
-}
 
 /** A dependency reference as declared in the agent manifest. */
 export interface DependencyRef {
@@ -63,13 +57,17 @@ export interface PreludeRef extends DependencyRef {
 export type JSONSchema = Record<string, unknown>;
 
 // ─────────────────────────────────────────────
-// Tool — what the LLM sees at runtime
+// Tool protocol — the contract every AFPS tool must satisfy
 // ─────────────────────────────────────────────
 
 /**
- * A Tool is the unit of capability surfaced to the LLM. Tools produced by
- * `ToolResolver` and by `ProviderResolver` share this contract — the LLM
- * cannot tell them apart.
+ * A Tool is the unit of capability surfaced to the LLM. Tools produced
+ * by a `ToolResolver` and by a `ProviderResolver` share this contract —
+ * the LLM cannot tell them apart.
+ *
+ * This type is spec-level because every AFPS-compliant tool package
+ * (@afps/memory, @afps/state, third-party tools, …) MUST conform to it
+ * to be loadable by any AFPS runtime.
  */
 export interface Tool {
   /** Tool name as exposed to the LLM (e.g. "add_memory", "gmail_call"). */
@@ -107,10 +105,10 @@ export interface ToolContext {
 /**
  * Tool result surfaced back to the LLM.
  *
- * The `content` array mirrors the MCP/Anthropic tool-result format so that
- * runtimes can forward results with minimal translation. Binary payloads
- * SHOULD be surfaced as file references (see spec §8.4) rather than inline
- * bytes.
+ * The `content` array mirrors the MCP/Anthropic tool-result format so
+ * that runtimes can forward results with minimal translation. Binary
+ * payloads SHOULD be surfaced as file references (see spec §8.4) rather
+ * than inline bytes.
  */
 export interface ToolResult {
   content: Array<
@@ -128,10 +126,10 @@ export interface ToolResult {
 /**
  * RunEvent — open envelope emitted by tools during a run.
  *
- * The envelope (`type`, `timestamp`, `runId`) is stable so any EventSink
- * can route events without understanding their payload. The payload itself
- * is an open index signature so tools — including third-party tools — can
- * carry whatever data they need without amending the spec.
+ * The envelope (`type`, `timestamp`, `runId`) is stable so any sink can
+ * route events without understanding their payload. The payload itself
+ * is an open index signature so tools — including third-party tools —
+ * can carry whatever data they need without amending the spec.
  *
  * Reserved `type` namespaces for core AFPS packages:
  *   - memory.*   (@afps/memory)
@@ -154,94 +152,4 @@ export interface RunEvent {
   toolCallId?: string;
   /** Payload — tool-defined, open schema. */
   [key: string]: unknown;
-}
-
-// ─────────────────────────────────────────────
-// Resolvers — four mirrored categories
-// ─────────────────────────────────────────────
-
-/**
- * Resolves `dependencies.tools[]` → Tool[] the runner registers with
- * the LLM. The default "bundled" implementation supplied by a runtime
- * loads tool code from `.agent-package/tools/{name}/` inside the bundle.
- */
-export interface ToolResolver {
-  resolve(refs: ToolRef[], bundle: Bundle): Promise<Tool[]>;
-}
-
-/**
- * Resolves `dependencies.providers[]` → Tool[]. Each produced Tool
- * encapsulates credential injection, authorizedUris enforcement, and
- * transport in its closure. Implementations are runner-specific
- * (SidecarProviderResolver, LocalProviderResolver, BitwardenProviderResolver, …).
- */
-export interface ProviderResolver {
-  resolve(refs: ProviderRef[], bundle: Bundle): Promise<Tool[]>;
-}
-
-/** Content of a resolved skill, ready to be concatenated into the prompt. */
-export interface ResolvedSkill {
-  name: string;
-  version: string;
-  content: string;
-  frontmatter?: Record<string, unknown>;
-}
-
-/**
- * Resolves `dependencies.skills[]` → skill fragments for prompt composition.
- * Default bundled impl reads from `.agent-package/skills/{name}/`.
- */
-export interface SkillResolver {
-  resolve(refs: SkillRef[], bundle: Bundle): Promise<ResolvedSkill[]>;
-}
-
-/** Content of a resolved prelude, ready to be prepended to the prompt. */
-export interface ResolvedPrelude {
-  name: string;
-  version: string;
-  content: string;
-}
-
-/**
- * Resolves `systemPreludes[]` → prelude fragments. Missing non-optional
- * refs MUST fail the run fail-closed (`PreludeResolutionError`). Optional
- * refs (`optional: true`) MAY be silently skipped.
- */
-export interface PreludeResolver {
-  resolve(refs: PreludeRef[], bundle: Bundle): Promise<ResolvedPrelude[]>;
-}
-
-// ─────────────────────────────────────────────
-// EventSink — business terminus
-// ─────────────────────────────────────────────
-
-/**
- * Accumulated end-of-run state a runner may assemble from the RunEvent
- * stream. Not imposed — runners are free to return their own shape from
- * `EventSink.finalize()` — but the listed fields carry conventional
- * semantics across AFPS-compliant runners.
- */
-export interface RunResult {
-  status: "success" | "failed" | "timeout" | "cancelled";
-  /** Accumulated from `output.*` events. */
-  output?: unknown;
-  /** Accumulated from `report.*` events. */
-  report?: string;
-  /** Last `state.set` payload. */
-  state?: unknown;
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * EventSink — environment-specific business terminus. The runtime never
- * supplies a default: every runner (Appstrate production, CLI, GitHub
- * Action, third-party) supplies its own.
- *
- * `handle` is called for every RunEvent. `finalize` is optional and, when
- * present, is invoked once at end-of-run to return an accumulated
- * {@link RunResult}.
- */
-export interface EventSink {
-  handle(event: RunEvent): Promise<void>;
-  finalize?(): Promise<RunResult>;
 }

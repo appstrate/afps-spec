@@ -2,21 +2,17 @@
 
 ## v1.3.0 — 2026-04-21
 
-### Platform tool packages
-
-- **Five reserved-domain tools ship as standalone npm packages** — `@afps/memory`, `@afps/state`, `@afps/output`, `@afps/report`, `@afps/log`. Each exposes a default-exported `Tool` conforming to `@afps-spec/schema/interfaces` and emits its canonical open-envelope `RunEvent` (`memory.added`, `state.set`, `output.emitted`, `report.appended`, `log.written`).
-- **`@afps/platform-compat`** — aggregates the five into a single `Record<toolName, Tool>`, intended for runners that auto-inject platform tools into pre-1.3 bundles whose manifests never declared them as explicit dependencies.
-- Packages live under `afps-spec/packages/` and share the spec's Apache-2.0 license for the code (the spec document itself remains CC-BY-4.0).
-
 ### Specification
 
-- **Runtime interfaces formalized** — the spec now publishes a normative TypeScript surface (`Tool`, `ToolContext`, `ToolResult`, `RunEvent`, `ToolResolver`, `ProviderResolver`, `SkillResolver`, `PreludeResolver`, `EventSink`, `RunResult`) so that AFPS-compliant runtimes and runners share a single vocabulary. Previously each runtime had to invent its own; the surface was effectively defined by whatever the reference runtime (`@appstrate/afps-runtime`) happened to export, and names collided with spec vocabulary (the legacy `CredentialProvider` versus AFPS "provider" packages).
+- **Tool protocol formalized** — the spec now publishes a normative TypeScript surface (`Tool`, `ToolContext`, `ToolResult`) describing the contract every AFPS tool implementation MUST satisfy to be loadable by any AFPS-compliant runtime. Previously each runtime defined its own tool shape; canonicalising this here ensures tool packages (including third-party tools) are portable across runtimes.
 - **`RunEvent` is an open envelope** — `{ type: string, timestamp, runId, toolCallId?, [key]: unknown }`. The `type` field is an open discriminant (`"<domain>.<verb>"`) so third-party tool packages can emit their own events without amending the spec. Core AFPS domains (`memory`, `state`, `output`, `report`, `log`, `provider`) are reserved.
 - **`systemPrelude.optional`** — new boolean on each `systemPreludes[]` entry. Enables dual-target agents that run on both a specific platform (e.g. `@appstrate/platform`) and elsewhere by marking platform-specific preludes as optional. Absent/false means missing preludes MUST fail the run fail-closed (current behaviour). Runtimes older than 1.3 that encounter `optional` SHOULD treat it as required (safe default).
 
+Runtime-internal TypeScript types (`Bundle`, `ToolResolver`, `ProviderResolver`, `SkillResolver`, `PreludeResolver`, `EventSink`, `RunResult`, `ResolvedSkill`, `ResolvedPrelude`) live in the runtime package that owns the implementation (e.g. `@appstrate/afps-runtime`). They describe how a specific TypeScript runtime wires itself up internally, not a contract shared across the ecosystem, so publishing them here would misrepresent their scope.
+
 ### Schema (`@afps-spec/schema@1.5.0`)
 
-- New module `@afps-spec/schema/interfaces` (also re-exported from `@afps-spec/schema`) with the types listed above.
+- New module `@afps-spec/schema/interfaces` (also re-exported from `@afps-spec/schema`) with `Tool`, `ToolContext`, `ToolResult`, `RunEvent`, and the `DependencyRef` family (`ToolRef`, `ProviderRef`, `SkillRef`, `PreludeRef`).
 - `systemPrelude` gains an optional `optional: boolean` field.
 - Regenerated `schema/v1/agent.schema.json`.
 - Minor bump: additive, non-breaking for 1.0–1.2 manifests.

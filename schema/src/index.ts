@@ -31,9 +31,10 @@ export {
   afpsJsonSchemaOverride,
 } from "./schemas.ts";
 
-// Runtime interfaces (schemaVersion 1.3+) — see ./interfaces.ts
+// Spec-level TypeScript contracts (schemaVersion 1.3+) — see ./interfaces.ts
+// Runtime-internal types (Bundle, *Resolver, EventSink, RunResult) live in the
+// runtime package that owns the implementation (e.g. @appstrate/afps-runtime).
 export type {
-  Bundle,
   DependencyRef,
   ToolRef,
   ProviderRef,
@@ -44,12 +45,4 @@ export type {
   ToolContext,
   ToolResult,
   RunEvent,
-  ToolResolver,
-  ProviderResolver,
-  ResolvedSkill,
-  SkillResolver,
-  ResolvedPrelude,
-  PreludeResolver,
-  RunResult,
-  EventSink,
 } from "./interfaces.ts";
