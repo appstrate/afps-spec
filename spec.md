@@ -247,7 +247,7 @@ Every package archive MUST contain `manifest.json` at the archive root. Addition
 | --- | --- |
 | `agent` | `prompt.md` at archive root, non-empty |
 | `skill` | `SKILL.md` at archive root; optional `scripts/`, `references/`, `assets/` directories (see §3.3) |
-| `tool` | source file referenced by manifest `entrypoint`; optional `TOOL.md` |
+| `tool` | file referenced by manifest `entrypoint` (in published archives, a self-contained bundle); optional `TOOL.md` |
 | `provider` | optional `PROVIDER.md` at archive root |
 
 Producers SHOULD use the `.afps` file extension for package archives (e.g., `customer-intake-1.0.0.afps`). Consumers MUST accept archives regardless of file extension. The `.afps` extension is a convention for human recognition and tool association; it does not alter the archive format, which remains standard ZIP.
@@ -330,7 +330,7 @@ All manifests are JSON objects. Unknown top-level fields and unknown nested fiel
 - **Type**: string
 - **Required**: MUST for `agent`; MAY for other package types
 - **Format**: `MAJOR.MINOR` where both segments are non-negative integers (e.g., `1.0`, `2.1`). The format follows a subset of semantic versioning without the patch component. A change in `MAJOR` indicates a breaking manifest model change; a change in `MINOR` indicates an additive, backwards-compatible revision.
-- **Description**: Declares which version of the AFPS manifest model the package targets. This field allows consumers to select the appropriate validation rules when the specification evolves. Producers MUST emit `1.0` for packages targeting this draft.
+- **Description**: Declares which version of the AFPS manifest model the package targets. This field allows consumers to select the appropriate validation rules when the specification evolves. Producers MUST emit at least `1.0` for packages targeting this draft; producers using fields introduced in a later minor revision MUST emit at least the minor that introduced them.
 - **Example**: `1.0`
 - **Default**: none
 
@@ -447,19 +447,30 @@ Producers SHOULD keep `SKILL.md` under 500 lines and move detailed reference mat
 
 ### 3.4 Tool Package
 
-A tool package declares a single callable capability and bundles its implementation source code. The manifest describes the tool interface; the source file provides the implementation.
+A tool package declares a single callable capability together with the runtime-loadable artifact that implements it. The manifest describes the tool interface; `entrypoint` points to the file the runner loads.
 
 #### Required files
 
-A tool package MUST contain `manifest.json` at the archive root and an implementation source file at the path declared by the `entrypoint` field.
+A tool package MUST contain `manifest.json` at the archive root and a runtime-loadable file at the path declared by the `entrypoint` field.
 
 #### `entrypoint`
 - **Type**: string
 - **Required**: MUST for `tool`
-- **Format**: relative path from archive root to a source file
-- **Description**: Path to the implementation source file. The file MUST exist in the archive. AFPS does not prescribe the programming language or module format of the source file; these are implementation concerns.
-- **Example**: `tool.ts`
+- **Format**: relative path from archive root to the file the runner loads
+- **Description**: Path to the file the runner loads to obtain the tool's implementation. The file MUST exist in the archive. `entrypoint` MUST NOT contain path traversal segments (`..`). In a **published** AFPS archive, `entrypoint` SHOULD point to a self-contained artifact — a single file whose imports have been inlined at publish time, such that loading it requires only the runtime's ambient module graph (see "Published archives" below). In a draft or unpublished working tree, `entrypoint` MAY point to a source file; the publish pipeline is expected to rewrite it to the compiled artifact. AFPS does not prescribe the programming language, module format, or bundler — only that consumers MUST be able to load the file at `entrypoint` with no further build step.
+- **Example**: `tool.js`
 - **Default**: none
+
+#### Published archives
+
+A package is "published" when it has been emitted by a registry or publish pipeline and is distributed to runners as an immutable artifact. In a published archive, `entrypoint` is a runtime contract: the runner loads that file and nothing else.
+
+To make `entrypoint` loadable without reaching into the producer's source tree, a published archive:
+
+- MUST resolve every import of `entrypoint` either (a) by inlining it into the emitted file, or (b) by declaring it in a runtime-externals allowlist that the target runner is guaranteed to provide. AFPS itself does not enumerate the allowlist; it is part of the contract between the producer, the registry, and the target runner.
+- MUST NOT require the consumer to resolve bare specifiers against the producer's source tree, to install dependencies from `package.json`, or to run a bundler.
+
+Consumers MUST NOT treat `entrypoint` as interface discovery; the authoritative tool metadata is the manifest's `tool` object (see `tool` below). Consumers MAY retain additional source files in the archive for transparency, attribution, or source-map resolution, but MUST NOT load them in place of `entrypoint`.
 
 #### `tool`
 - **Type**: object
@@ -490,9 +501,9 @@ A tool package MUST contain `manifest.json` at the archive root and an implement
 
 `tool.inputSchema` follows standard JSON Schema vocabulary for describing input parameters. It is not constrained to the AFPS schema subset defined in §5, which applies only to agent `input`, `output`, and `config` sections.
 
-`entrypoint` MUST NOT contain path traversal segments (`..`). Producers SHOULD reference a file at the archive root.
+Producers SHOULD reference an `entrypoint` at the archive root (see "Published archives" above for the self-containment rule).
 
-AFPS does not define how consumers load or execute the source file. A consumer MAY import it as a module, spawn it as a subprocess, compile it, or use any other strategy. The `tool` object in the manifest provides sufficient metadata for tool discovery and invocation without executing the source code.
+AFPS does not prescribe how consumers load the `entrypoint` file. A consumer MAY import it as a module, spawn it as a subprocess, or use any other strategy consistent with the publisher-declared module format. The `tool` object in the manifest provides sufficient metadata for tool discovery and invocation without executing the file.
 
 #### `TOOL.md`
 - **Required**: MAY
@@ -815,12 +826,12 @@ Consumers SHOULD ignore `__MACOSX/` directories and other platform-specific meta
 
 ### 8.2 Tool Code Execution
 
-Tool packages (§3.4) contain source code that consumers may load and execute. This is the highest-risk surface in the AFPS model:
+Tool packages (§3.4) reference a runtime-loadable file via `entrypoint` that consumers load and execute. This is the highest-risk surface in the AFPS model:
 
 - consumers that execute tool code SHOULD do so in a sandboxed environment with the minimum necessary permissions;
 - consumers SHOULD prevent tool code from accessing the host filesystem, network, or environment variables beyond the scope required by the tool;
 - consumers SHOULD apply a timeout to tool execution to prevent resource exhaustion;
-- registries SHOULD perform static analysis or review of tool source code before making a package publicly available.
+- registries SHOULD perform static analysis or review of the `entrypoint` artifact before making a package publicly available; registries that compile `entrypoint` at publish time SHOULD additionally verify that the emitted artifact was produced from the declared source tree.
 
 AFPS does not define how tool code is loaded or executed. Consumers are responsible for implementing appropriate security measures for their execution environment.
 
@@ -949,7 +960,7 @@ When an extension field gains broad adoption across multiple implementations, it
 | `output.schema` | agent | object | MUST if `output` present | AFPS schema object | none |
 | `config` | agent | object | MAY | per-deployment settings; requires `schema` child | none |
 | `config.schema` | agent | object | MUST if `config` present | AFPS schema object | none |
-| `entrypoint` | tool | string | MUST | relative path to source file | none |
+| `entrypoint` | tool | string | MUST | relative path to the runtime-loadable file; in published archives, a self-contained artifact | none |
 | `tool` | tool | object | MUST | tool interface declaration | none |
 | `tool.name` | tool | string | MUST | non-empty tool identifier | none |
 | `tool.description` | tool | string | MUST | tool description for agents | none |

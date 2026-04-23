@@ -1094,3 +1094,32 @@ describe("tool interface (§3.4)", () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────
+// §3.4 — Tool entrypoint points to the loadable artifact
+// ─────────────────────────────────────────────
+
+describe("tool entrypoint — distribution semantics (§3.4)", () => {
+  const base = {
+    name: "@test/tool",
+    version: "1.0.0",
+    type: "tool",
+    tool: { name: "my_tool", description: "Desc", inputSchema: {} },
+  };
+
+  test("entrypoint pointing to a compiled bundle is valid", () => {
+    expectValid(toolManifestSchema, { ...base, entrypoint: "tool.js" });
+  });
+
+  test("entrypoint pointing to a source file is valid (draft/authoring)", () => {
+    expectValid(toolManifestSchema, { ...base, entrypoint: "src/index.ts" });
+  });
+
+  test("schemaVersion 1.1 accepted", () => {
+    expectValid(toolManifestSchema, {
+      ...base,
+      entrypoint: "tool.js",
+      schemaVersion: "1.1",
+    });
+  });
+});
