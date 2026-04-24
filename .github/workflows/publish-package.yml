@@ -5,11 +5,10 @@ on:
     tags:
       - "afps-schema@*"
       - "afps-types@*"
-      - "afps-platform-tools@*"
   workflow_dispatch:
     inputs:
       package:
-        description: "Package directory under packages/ (e.g. schema, types, platform-tools)"
+        description: "Package directory under packages/ (e.g. schema, types)"
         required: true
 
 permissions:
