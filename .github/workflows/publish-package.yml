@@ -76,11 +76,12 @@ jobs:
         run: bun test
 
       - name: Configure npm auth for bun
-        # setup-node writes an .npmrc with ${NODE_AUTH_TOKEN} placeholders
-        # that npm expands at runtime — bun doesn't expand them, so we
-        # write a sibling .npmrc with the literal token.
+        # setup-node writes an .npmrc at $NPM_CONFIG_USERCONFIG with a
+        # ${NODE_AUTH_TOKEN} placeholder that npm expands at runtime.
+        # bun doesn't expand placeholders, so overwrite that same file
+        # with the literal token — bun honours NPM_CONFIG_USERCONFIG.
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$NPM_CONFIG_USERCONFIG"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
