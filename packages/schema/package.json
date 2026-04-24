@@ -5,7 +5,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/appstrate/afps-spec",
-    "directory": "schema"
+    "directory": "packages/schema"
   },
   "files": [
     "src",
@@ -18,6 +18,7 @@
   "scripts": {
     "generate": "bun src/generate.ts",
     "check": "bun src/generate.ts --check",
+    "typecheck": "bun src/generate.ts --check",
     "test": "bun test",
     "test:conformance": "bun test tests/conformance.test.ts"
   },

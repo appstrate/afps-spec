@@ -18,7 +18,7 @@ import {
   providerManifestSchema,
 } from "../src/schemas.ts";
 
-const ROOT = resolve(dirname(import.meta.filename!), "../..");
+const ROOT = resolve(dirname(import.meta.filename!), "../../..");
 
 async function loadExample(path: string): Promise<unknown> {
   const content = await readFile(resolve(ROOT, path), "utf-8");

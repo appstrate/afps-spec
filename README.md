@@ -85,7 +85,10 @@ The agent's manifest lists these in a single `dependencies` field with semver ra
 - [spec.md](./spec.md) — the AFPS v1.0 draft specification
 - [primer.md](./primer.md) — non-normative introduction for newcomers
 - [examples/](./examples/) — minimal and full package examples (agent, skill, tool, provider)
-- [schema/](./schema/) — JSON Schema files (see [schema/README](./schema/README.md))
+- [packages/](./packages/) — reference TS artefacts published to npm under `@afps-spec/*`
+  - [packages/schema/](./packages/schema/) — JSON Schema + Zod (see [README](./packages/schema/README.md))
+  - [packages/types/](./packages/types/) — TS bindings for the protocol
+  - [packages/platform-tools/](./packages/platform-tools/) — reference impl of the 5 reserved tools
 - [GOVERNANCE.md](./GOVERNANCE.md) — change process and stewardship
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — how to contribute
 - [CHANGELOG.md](./CHANGELOG.md) — specification history
