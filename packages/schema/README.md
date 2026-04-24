@@ -1,6 +1,6 @@
 # AFPS JSON Schemas
 
-Machine-readable representation of the AFPS specification. The specification text ([spec.md](../spec.md)) is the normative source.
+Machine-readable representation of the AFPS specification. The specification text ([spec.md](../../spec.md)) is the normative source.
 
 ## npm package
 

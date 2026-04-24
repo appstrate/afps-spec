@@ -1,0 +1,16 @@
+{
+  "name": "afps-spec",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "bun-types": "^1.3.10",
+    "typescript": "^5"
+  },
+  "scripts": {
+    "typecheck": "bun --filter='*' run typecheck",
+    "test:all": "bun --filter='*' run test"
+  }
+}
