@@ -75,14 +75,20 @@ jobs:
         working-directory: ${{ steps.parse.outputs.dir }}
         run: bun test
 
+      - name: Configure npm auth for bun
+        # setup-node writes an .npmrc with ${NODE_AUTH_TOKEN} placeholders
+        # that npm expands at runtime — bun doesn't expand them, so we
+        # write a sibling .npmrc with the literal token.
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to npm
         working-directory: ${{ steps.parse.outputs.dir }}
         # bun pack rewrites `workspace:*` deps to the concrete published
-        # version on the fly; npm publish consumes the tarball it
-        # produces. No ad-hoc package.json surgery required.
+        # version on the fly, so no ad-hoc package.json surgery required.
         run: bun publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
