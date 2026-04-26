@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://afps.appstrate.dev/schema/v1/provider.schema.json",
+  "$id": "https://afps.appstrate.dev/packages/schema/v1/provider.schema.json",
   "$comment": "SPDX-License-Identifier: CC-BY-4.0 — Copyright (c) 2026 Appstrate contributors",
   "title": "AFPS Provider Manifest",
   "description": "Manifest schema for AFPS provider packages. A provider declares auth mode, OAuth endpoints, credential schema, and setup guide.",

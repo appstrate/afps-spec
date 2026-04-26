@@ -48,7 +48,7 @@ schema/
 └── package.json          ← @afps-spec/schema
 ```
 
-URLs follow the pattern `https://afps.appstrate.dev/schema/v1/<type>.schema.json`.
+URLs follow the pattern `https://afps.appstrate.dev/packages/schema/v1/<type>.schema.json`.
 
 ## Schema validation
 
@@ -73,7 +73,7 @@ Reference a schema using `$schema` for editor validation:
 
 ```json
 {
-  "$schema": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
+  "$schema": "https://afps.appstrate.dev/packages/schema/v1/agent.schema.json",
   "schemaVersion": "1.0",
   "name": "@scope/my-agent",
   "version": "1.0.0",

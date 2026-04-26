@@ -1,5 +1,5 @@
 {
-  "$schema": "https://afps.appstrate.dev/schema/v1/agent.schema.json",
+  "$schema": "https://afps.appstrate.dev/packages/schema/v1/agent.schema.json",
   "name": "@example/customer-intake",
   "version": "1.2.0",
   "type": "agent",

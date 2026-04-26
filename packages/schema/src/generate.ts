@@ -18,7 +18,7 @@ import { createSchemas, afpsJsonSchemaOverride } from "./schemas.ts";
 
 const MAJOR = 1;
 const VERSION_TAG = `v${MAJOR}`;
-const BASE_URL = "https://afps.appstrate.dev/schema";
+const BASE_URL = "https://afps.appstrate.dev/packages/schema";
 const OUTPUT_DIR = resolve(dirname(import.meta.filename!), "..", VERSION_TAG);
 
 const isCheck = process.argv.includes("--check");

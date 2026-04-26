@@ -1,5 +1,15 @@
 # Changelog
 
+## Schema (`@afps-spec/schema@1.4.0`) — 2026-04-25
+
+- **Canonical schema URL moved.** The schema directory was relocated from the repo root to `packages/schema/`. The hosted `$id` follows: `https://afps.appstrate.dev/schema/v1/<type>.schema.json` → `https://afps.appstrate.dev/packages/schema/v1/<type>.schema.json`.
+- Regenerated `v1/{agent,skill,tool,provider}.schema.json` with the new `$id`.
+- Updated all `examples/*/manifest.json` `$schema` references.
+- Spec text unchanged. Consumers that load schemas by `$id` over the network MUST update; consumers that bundle `@afps-spec/schema` will pick this up via the npm version bump.
+- Minor version bump: changing the canonical `$id` is observable to strict validators even though the schema content is unchanged.
+
+---
+
 ## v1.1.1 — 2026-04-11
 
 ### Specification
