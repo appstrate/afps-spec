@@ -24,6 +24,7 @@ export {
   oauthTokenContentTypeEnum,
   credentialTransform,
   credentialTransformEncodingEnum,
+  uploadProtocolEnum,
   providerConfiguration,
   setupGuide,
   schemaObject,
