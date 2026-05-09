@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.2.0 — 2026-05-09
+
+### Specification
+
+- **§7.7 Upload Protocols (new section)** — formalizes `definition.uploadProtocols`, an OPTIONAL array declaring the resumable upload protocols a provider's API supports. Closed enum: `google-resumable`, `s3-multipart`, `tus`, `ms-resumable`. Consumers MUST reject manifests declaring values outside the enum. New protocols require a minor version bump.
+- **Appendix A (conformance checklist)** — added `definition.uploadProtocols` row.
+- Backwards compatible: existing manifests without `uploadProtocols` remain valid; the field's absence MUST be treated as "no resumable upload capabilities declared".
+
+### Schema (`@afps-spec/schema@1.5.0`)
+
+- `providerDefinition` gains `uploadProtocols` optional field (`UploadProtocol[]` with closed 4-value enum and `uniqueItems`).
+- New export: `uploadProtocolEnum`.
+- Regenerated `v1/provider.schema.json`.
+- Minor version bump (purely additive — all new fields are optional and defaults preserve prior behavior).
+
+---
+
 ## Schema (`@afps-spec/schema@1.4.0`) — 2026-04-25
 
 - **Canonical schema URL moved.** The schema directory was relocated from the repo root to `packages/schema/`. The hosted `$id` follows: `https://afps.appstrate.dev/schema/v1/<type>.schema.json` → `https://afps.appstrate.dev/packages/schema/v1/<type>.schema.json`.

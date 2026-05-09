@@ -889,6 +889,97 @@ describe("provider authentication (§7)", () => {
     });
   });
 
+  // §7.7 — uploadProtocols
+  test("uploadProtocols accepts a single known protocol", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "oauth2",
+        oauth2: {
+          authorizationUrl: "https://example.com/auth",
+          tokenUrl: "https://example.com/token",
+        },
+        uploadProtocols: ["google-resumable"],
+      },
+    });
+  });
+
+  test("uploadProtocols accepts multiple known protocols", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "oauth2",
+        oauth2: {
+          authorizationUrl: "https://example.com/auth",
+          tokenUrl: "https://example.com/token",
+        },
+        uploadProtocols: ["s3-multipart", "tus", "ms-resumable"],
+      },
+    });
+  });
+
+  test("uploadProtocols accepts empty array", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        uploadProtocols: [],
+      },
+    });
+  });
+
+  test("uploadProtocols omitted is valid (backwards compatible)", () => {
+    expectValid(providerManifestSchema, {
+      ...base,
+      definition: { authMode: "api_key", credentials: { schema: {} } },
+    });
+  });
+
+  test("uploadProtocols rejects unknown protocol", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        uploadProtocols: ["fake-protocol"],
+      },
+    });
+  });
+
+  test("uploadProtocols rejects mix of known and unknown", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        uploadProtocols: ["tus", "fake-protocol"],
+      },
+    });
+  });
+
+  test("uploadProtocols rejects duplicate values", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        uploadProtocols: ["tus", "tus"],
+      },
+    });
+  });
+
+  test("uploadProtocols rejects non-array values", () => {
+    expectInvalid(providerManifestSchema, {
+      ...base,
+      definition: {
+        authMode: "api_key",
+        credentials: { schema: {} },
+        uploadProtocols: "google-resumable",
+      },
+    });
+  });
+
   test("provider presentation fields", () => {
     expectValid(providerManifestSchema, {
       ...base,

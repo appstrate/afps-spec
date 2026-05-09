@@ -172,6 +172,25 @@ export const oauthTokenContentTypeEnum = z.enum([
 export const credentialTransformEncodingEnum = z.enum(["base64"]);
 
 /**
+ * Resumable upload protocols a provider's API supports. Closed enum: any
+ * conforming consumer that gates an `upload`-style capability MUST reject
+ * manifests declaring values outside this set.
+ *
+ * - `google-resumable`: Google resumable upload (Drive, YouTube, GCS).
+ * - `s3-multipart`: S3 multipart upload (AWS S3 and S3-compatible).
+ * - `tus`: tus.io resumable upload protocol (RFC-style spec at tus.io).
+ * - `ms-resumable`: Microsoft Graph upload session (OneDrive, Outlook, Teams).
+ *
+ * New protocols require a minor version bump of this spec.
+ */
+export const uploadProtocolEnum = z.enum([
+  "google-resumable",
+  "s3-multipart",
+  "tus",
+  "ms-resumable",
+]);
+
+/**
  * Generic, template-based replacement for {@link credentialEncodingEnum}.
  *
  * `template` is rendered by substituting `{{field}}` placeholders with values
@@ -221,6 +240,12 @@ export const providerDefinition = z.looseObject({
   authorizedUris: z.array(z.string()).optional(),
   allowAllUris: z.boolean().optional(),
   availableScopes: z.array(z.unknown()).optional(),
+  uploadProtocols: z
+    .array(uploadProtocolEnum)
+    .refine((arr) => new Set(arr).size === arr.length, {
+      error: "uploadProtocols must contain unique values",
+    })
+    .optional(),
 });
 
 export const setupGuide = z

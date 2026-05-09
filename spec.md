@@ -810,6 +810,21 @@ Optional top-level fields for `api_key` providers:
 
 For interoperability, `availableScopes` SHOULD be an array of objects with `value` and `label` keys.
 
+### 7.7 Upload Protocols
+
+`definition.uploadProtocols` MAY declare the resumable upload protocols supported by the provider's API. It is a capability declaration about the upstream wire format, not a runtime configuration: it tells consumers which standardized chunked-upload flows agents may safely invoke against this provider.
+
+The field is an array of unique strings drawn from a closed enum:
+
+- `google-resumable` — Google resumable upload (Drive, YouTube, Cloud Storage).
+- `s3-multipart` — Amazon S3 multipart upload (and S3-compatible services).
+- `tus` — tus.io resumable upload protocol (<https://tus.io>).
+- `ms-resumable` — Microsoft Graph upload session (OneDrive, Outlook, Teams).
+
+Consumers MUST reject manifests declaring values outside this enum. Adding a new protocol requires a minor version bump of this specification; consumers MUST NOT silently accept unknown values nor coerce them into a known protocol.
+
+`uploadProtocols` is OPTIONAL and additive. A provider that does not expose chunked-upload capabilities (or whose consumer does not support the field) MAY omit it; consumers MUST treat omission as "no resumable upload capabilities declared". Consumers that gate an `upload`-style tool surface SHOULD advertise that capability only when at least one declared protocol matches a flow they can dispatch.
+
 ## 8. Security Considerations
 
 AFPS packages describe AI workflows that may access external services, process user data, and execute code. Implementers MUST consider the following threats.
@@ -985,6 +1000,7 @@ When an extension field gains broad adoption across multiple implementations, it
 | `definition.authorizedUris` | provider | string[] | MAY | allowed upstream URI patterns | none |
 | `definition.allowAllUris` | provider | boolean | MAY | unrestricted upstream access | consumer-defined |
 | `definition.availableScopes` | provider | array | MAY | interoperable form is `{ value, label }[]` | none |
+| `definition.uploadProtocols` | provider | string[] | MAY | unique values from closed enum (§7.7) | `google-resumable`, `s3-multipart`, `tus`, `ms-resumable` |
 | `iconUrl` | provider | string | MAY | URI recommended | none |
 | `categories` | provider | string[] | MAY | arbitrary strings | consumer-defined |
 | `docsUrl` | provider | string | MAY | URI recommended | none |
