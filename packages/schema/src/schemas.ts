@@ -597,7 +597,19 @@ export function createSchemas(majorVersion: number) {
       source: integrationSource,
       auths: z.record(z.string().regex(AUTH_KEY_REGEX), authMethod),
       icon: z.string().optional(),
+      // `tools` is a SPARSE POLICY TABLE keyed by tool name — it carries
+      // `required_scopes` / `required_auth_key` / `url_patterns` per tool
+      // that needs them. It is NOT the catalog of "tools this integration
+      // exposes": the catalog comes from the referenced mcp-server's
+      // MCPB-canonical `tools[]` (local source) or the integration's
+      // declared tools (remote/api sources). An author opts a tool OUT of
+      // the agent-facing surface via `hidden_tools` below.
       tools: z.record(z.string(), integrationToolMeta).optional(),
+      // Explicit opt-out: tool names that exist in the resolved catalog
+      // but should never reach the agent's picker / `tools/list`. Tools
+      // referenced as a `connect.tool` (run-start primitives) are auto-
+      // hidden, so `hidden_tools` only needs to enumerate the rest.
+      hidden_tools: z.array(z.string()).optional(),
       setup_guide: setupGuide.optional(),
     })
     .superRefine((val, ctx) => {
