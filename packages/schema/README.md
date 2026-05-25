@@ -10,7 +10,8 @@ This directory is published as `@afps-spec/schema` on npm. Implementations can i
 import { agentManifestSchema } from "@afps-spec/schema";
 
 const myAgentSchema = agentManifestSchema.extend({
-  "x-custom-field": z.string().optional(),
+  // Extensions go under `_meta`, keyed by a reverse-DNS namespace (spec §10).
+  _meta: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
 });
 ```
 
@@ -36,19 +37,21 @@ Schemas are organized by major version:
 
 ```
 schema/
-├── v1/                   ← AFPS v1.x schemas
+├── v2/                   ← AFPS v2.x schemas
 │   ├── agent.schema.json
 │   ├── skill.schema.json
-│   ├── tool.schema.json
-│   └── provider.schema.json
+│   ├── mcp-server.schema.json
+│   └── integration.schema.json
 ├── src/
-│   ├── schemas.ts        ← Zod source (generates v1/)
+│   ├── schemas.ts        ← Zod source (generates v2/)
 │   ├── generate.ts       ← Generation script
 │   └── index.ts          ← npm entry point
 └── package.json          ← @afps-spec/schema
 ```
 
-URLs follow the pattern `https://afps.appstrate.dev/packages/schema/v1/<type>.schema.json`.
+URLs follow the pattern `https://afps.appstrate.dev/packages/schema/v2/<type>.schema.json`.
+
+The `mcp-server.schema.json` validates the MCP Bundle (MCPB) manifest a built `mcp-server` package embeds; AFPS-specific data is carried under the MCPB `_meta` object.
 
 ## Schema validation
 
@@ -73,12 +76,12 @@ Reference a schema using `$schema` for editor validation:
 
 ```json
 {
-  "$schema": "https://afps.appstrate.dev/packages/schema/v1/agent.schema.json",
-  "schemaVersion": "1.0",
+  "$schema": "https://afps.appstrate.dev/packages/schema/v2/agent.schema.json",
+  "schema_version": "2.0",
   "name": "@scope/my-agent",
   "version": "1.0.0",
   "type": "agent"
 }
 ```
 
-Implementations may extend these schemas with additional fields using the `x-` prefix convention (see spec §10).
+Implementations may extend these schemas with additional fields under the `_meta` reverse-DNS namespace convention (see spec §10).

@@ -1,9 +1,9 @@
 # Agent Format Packaging Standard (AFPS)
 
-![AFPS v1.0](https://img.shields.io/badge/AFPS-v1.0-blue)
+![AFPS v2.0](https://img.shields.io/badge/AFPS-v2.0-blue)
 
 AFPS is an open specification for declaring portable AI workflow packages.
-It standardizes how agents, skills, tools, and providers are described, versioned, and distributed.
+It standardizes how agents, skills, MCP servers, and integrations are described, versioned, and distributed.
 It focuses on package definition and composition, not on tool calling or agent-to-agent transport.
 
 ## Ecosystem Positioning
@@ -16,22 +16,23 @@ Existing AI agent standards define **capabilities** — what an agent can do and
                 │  prompt.md + manifest.json    │  summarize support requests"
                 ├───────────────────────────────┤
   Capability    │  Skills (SKILL.md)            │  "Rewrite in a professional tone"
-                │  Tools (source + manifest)    │  "Fetch JSON from a URL"
+                │  MCP Servers (MCPB)           │  "Fetch JSON from a URL"
                 │  MCP Tools                    │  "Read a file, query a database"
                 ├───────────────────────────────┤
-  Connection    │  Providers (OAuth2, API key)  │  "Gmail, OpenAI, Slack"
+  Connection    │  Integrations (OAuth2, key)   │  "Gmail, OpenAI, Slack"
                 ├───────────────────────────────┤
   Transport     │  MCP / A2A                    │  Runtime protocols
                 └───────────────────────────────┘
 ```
 
-An agent's `prompt.md` is the equivalent of what a user would type to give an agent its objective. Skills and tools are the capabilities the agent draws on to reach that objective. Providers are the authenticated service connections. AFPS packages all of this into a portable, versioned `.afps` artifact (a standard ZIP file).
+An agent's `prompt.md` is the equivalent of what a user would type to give an agent its objective. Skills and MCP servers are the capabilities the agent draws on to reach that objective. Integrations are the authenticated service connections. AFPS packages all of this into a portable, versioned `.afps` artifact (a standard ZIP file).
 
-- **MCP** defines runtime tool invocation. AFPS does not define tool-calling transport; a runtime may choose to expose AFPS tools via MCP.
+- **MCP** defines runtime tool invocation. AFPS does not define tool-calling transport; a runtime may choose to expose AFPS capabilities via MCP.
+- **MCPB** defines how a local MCP server is packaged. An AFPS `mcp-server` manifest *is* an MCPB manifest — a built `mcp-server` runs unmodified in any MCPB host (rename `.afps` to `.mcpb`).
 - **Agent Skills** defines reusable capabilities (`SKILL.md`). AFPS skill packages are a strict superset: a valid Agent Skill directory becomes an AFPS skill when a `manifest.json` is added. The `SKILL.md` format, frontmatter fields, and optional directories (`scripts/`, `references/`, `assets/`) are preserved unchanged. AFPS adds identity, versioning, and dependency resolution.
-- **A2A** defines inter-agent communication. AFPS does not compete — A2A metadata can be added via `x-` extension fields.
+- **A2A** defines inter-agent communication. AFPS does not compete — A2A metadata can be added via the `_meta` extension mechanism.
 
-No existing standard covers the goal layer: structured workflow packages with dependency resolution, semantic versioning, provider auth metadata, and a distribution format. AFPS fills that gap.
+No existing standard covers the goal layer: structured workflow packages with dependency resolution, semantic versioning, integration auth metadata, and a distribution format. AFPS fills that gap.
 
 ## Quick Start
 
@@ -43,8 +44,8 @@ Create a minimal agent package with two files:
   "name": "@my-org/hello-world",
   "version": "1.0.0",
   "type": "agent",
-  "schemaVersion": "1.0",
-  "displayName": "Hello World",
+  "schema_version": "2.0",
+  "display_name": "Hello World",
   "author": "My Org",
   "dependencies": {}
 }
@@ -59,7 +60,7 @@ ZIP both files together (using the `.afps` extension by convention) — that's a
 
 ### How an agent composes its dependencies
 
-A real agent declares the skills, tools, and providers it needs:
+A real agent declares the skills, MCP servers, and integrations it needs:
 
 ```text
                   ┌──────────────────────────────┐
@@ -72,19 +73,19 @@ A real agent declares the skills, tools, and providers it needs:
           ▼              ▼              ▼
   ┌──────────────┐ ┌────────────┐ ┌────────────┐
   │ @acme/gmail  │ │ @acme/     │ │ @acme/     │
-  │ provider     │ │ rewrite-   │ │ fetch-json │
-  │ (OAuth2)     │ │ tone       │ │ tool       │
+  │ integration  │ │ rewrite-   │ │ fetch-json │
+  │ (OAuth2)     │ │ tone       │ │ mcp-server │
   │              │ │ skill      │ │            │
   └──────────────┘ └────────────┘ └────────────┘
 ```
 
-The agent's manifest lists these in a single `dependencies` field with semver ranges. See the [full example](./examples/agent-full/manifest.json).
+The agent's manifest lists these in a single `dependencies` field with semver ranges. See the [primer](./primer.md) for a worked example.
 
 ## Repository Contents
 
-- [spec.md](./spec.md) — the AFPS v1.0 draft specification
+- [spec.md](./spec.md) — the AFPS v2.0 draft specification
 - [primer.md](./primer.md) — non-normative introduction for newcomers
-- [examples/](./examples/) — minimal and full package examples (agent, skill, tool, provider)
+- [examples/](./examples/) — minimal and full package examples (agent, skill, mcp-server, integration)
 - [packages/](./packages/) — reference TS artefacts published to npm under `@afps-spec/*`
   - [packages/schema/](./packages/schema/) — JSON Schema + Zod (see [README](./packages/schema/README.md))
   - [packages/types/](./packages/types/) — TS bindings for the protocol
@@ -98,9 +99,9 @@ The agent's manifest lists these in a single `dependencies` field with semver ra
 AFPS defines:
 
 - Package identity with scoped names and semantic versions
-- Manifest fields for `agent`, `skill`, `tool`, and `provider`
-- Dependencies and provider configuration
-- A constrained schema system for input, output, and config
+- Manifest fields for `agent`, `skill`, `mcp-server`, and `integration`
+- Dependencies and integration configuration
+- A JSON Schema 2020-12 based schema system for input, output, and config
 - ZIP package structure for distribution
 
 AFPS does not define:

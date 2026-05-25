@@ -32,7 +32,7 @@ New optional fields, additional examples, extended guidance. These SHOULD use a 
 
 ### Breaking Changes
 
-Any change to manifest meaning, validation rules, archive layout, or field semantics MUST increment the major `schemaVersion`. Breaking changes require the full review period and explicit migration guidance.
+Any change to manifest meaning, validation rules, archive layout, or field semantics MUST increment the major `schema_version`. Breaking changes require the full review period and explicit migration guidance.
 
 ## Development Setup
 

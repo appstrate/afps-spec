@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://afps.appstrate.dev/packages/schema/v1/tool.schema.json",
+  "$id": "https://afps.appstrate.dev/packages/schema/v2/skill.schema.json",
   "$comment": "SPDX-License-Identifier: CC-BY-4.0 — Copyright (c) 2026 Appstrate contributors",
-  "title": "AFPS Tool Manifest",
-  "description": "Manifest schema for AFPS tool packages. A tool declares a single callable capability with its interface and implementation source.",
+  "title": "AFPS Skill Manifest",
+  "description": "Manifest schema for AFPS 2.0 skill packages. A skill is a superset of the Agent Skills format with package identity and versioning.",
   "type": "object",
   "properties": {
     "name": {
@@ -15,9 +15,9 @@
     },
     "type": {
       "type": "string",
-      "const": "tool"
+      "const": "skill"
     },
-    "displayName": {
+    "display_name": {
       "type": "string"
     },
     "description": {
@@ -35,9 +35,9 @@
     "repository": {
       "type": "string"
     },
-    "schemaVersion": {
+    "schema_version": {
       "type": "string",
-      "pattern": "^1\\.(0|[1-9]\\d*)$"
+      "pattern": "^2\\.(0|[1-9]\\d*)$"
     },
     "dependencies": {
       "type": "object",
@@ -52,7 +52,7 @@
             "type": "string"
           }
         },
-        "tools": {
+        "mcp_servers": {
           "type": "object",
           "propertyNames": {
             "type": "string",
@@ -62,7 +62,7 @@
             "type": "string"
           }
         },
-        "providers": {
+        "integrations": {
           "type": "object",
           "propertyNames": {
             "type": "string",
@@ -75,41 +75,24 @@
       },
       "additionalProperties": {}
     },
-    "entrypoint": {
-      "type": "string",
-      "minLength": 1
-    },
-    "tool": {
+    "_meta": {
       "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "description": {
-          "type": "string",
-          "minLength": 1
-        },
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": {}
-        }
+      "propertyNames": {
+        "type": "string"
       },
-      "required": [
-        "name",
-        "description",
-        "inputSchema"
-      ],
-      "additionalProperties": false
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      }
     }
   },
   "required": [
     "name",
     "version",
-    "type",
-    "entrypoint",
-    "tool"
+    "type"
   ],
   "additionalProperties": {}
 }

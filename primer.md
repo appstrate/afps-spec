@@ -16,17 +16,17 @@ The key distinction is between **goals** and **capabilities**:
 - A **skill** tells the agent *how to do something* — it is a reusable capability ("rewrite text in a professional tone").
 - An **agent** tells the agent *what to accomplish* — it is the user's intent, packaged ("process my inbox and create a summary of support requests").
 
-Agent Skills (Anthropic / AAIF) and MCP Tools define capabilities. AFPS defines the goal layer that composes those capabilities into a complete, portable workflow:
+Agent Skills (Anthropic / AAIF) and MCP servers define capabilities. AFPS defines the goal layer that composes those capabilities into a complete, portable workflow:
 
 ```text
                 ┌───────────────────────────────┐
   Goal          │  AFPS Agent                   │  The user's intent, packaged.
                 │  prompt.md + manifest.json    │  "What should the agent accomplish?"
                 ├───────────────────────────────┤
-  Capability    │  AFPS Skills / Tools          │  Reusable abilities the agent
-                │  MCP Tools                    │  can draw on to reach the goal.
+  Capability    │  AFPS Skills / MCP Servers    │  Reusable abilities the agent
+                │  (SKILL.md / MCPB)            │  can draw on to reach the goal.
                 ├───────────────────────────────┤
-  Connection    │  AFPS Providers               │  Authenticated access to
+  Connection    │  AFPS Integrations            │  Authenticated access to
                 │  (OAuth2, API key, ...)       │  external services.
                 ├───────────────────────────────┤
   Transport     │  MCP (tool invocation)        │  Runtime protocols — out of
@@ -34,9 +34,9 @@ Agent Skills (Anthropic / AAIF) and MCP Tools define capabilities. AFPS defines 
                 └───────────────────────────────┘
 ```
 
-An agent's `prompt.md` replaces what a human would type to give an agent its objective. The agent manifest declares which skills, tools, and providers the agent needs to fulfill that objective. AFPS packages everything together into a versioned, distributable `.afps` artifact (a standard ZIP file).
+An agent's `prompt.md` replaces what a human would type to give an agent its objective. The agent manifest declares which skills, MCP servers, and integrations the agent needs to fulfill that objective. AFPS packages everything together into a versioned, distributable `.afps` artifact (a standard ZIP file).
 
-MCP standardizes how an agent invokes tools at runtime. A2A standardizes how agents discover and communicate with each other. Agent Skills standardize reusable capability descriptions. AFPS standardizes the goal and its dependencies — the package that gets published, installed, and composed before any of that happens. The four are complementary.
+MCP standardizes how an agent invokes tools at runtime. A2A standardizes how agents discover and communicate with each other. Agent Skills standardize reusable capability descriptions. MCPB standardizes how a local MCP server is packaged — and an AFPS `mcp-server` manifest *is* an MCPB manifest. AFPS standardizes the goal and its dependencies — the package that gets published, installed, and composed before any of that happens. They are complementary.
 
 AFPS is transport-agnostic: it does not prescribe how packages are fetched, transferred, or cached.
 
@@ -50,7 +50,7 @@ An agent is a complete AI workflow — the primary unit of execution. It represe
 
 An agent execution is **non-interactive and run-to-completion**: the agent receives the objective, processes the task autonomously, and returns a structured result. There is no conversational back-and-forth — the agent runs from start to finish without user interaction.
 
-Think of it like a `docker-compose.yml` for AI agents — it declares the goal, the dependencies, the inputs, the outputs, the configuration, and execution hints, all in one portable artifact. Where a skill says "I know how to rewrite text professionally", an agent says "process these emails and create a summary" — and lists the skills, tools, and providers needed to do it.
+Think of it like a `docker-compose.yml` for AI agents — it declares the goal, the dependencies, the inputs, the outputs, the configuration, and execution hints, all in one portable artifact. Where a skill says "I know how to rewrite text professionally", an agent says "process these emails and create a summary" — and lists the skills, MCP servers, and integrations needed to do it.
 
 **Minimal example** (`manifest.json`):
 
@@ -59,11 +59,11 @@ Think of it like a `docker-compose.yml` for AI agents — it declares the goal, 
   "name": "@acme/customer-intake",
   "version": "1.0.0",
   "type": "agent",
-  "schemaVersion": "1.0",
-  "displayName": "Customer Intake",
+  "schema_version": "2.0",
+  "display_name": "Customer Intake",
   "author": "Acme Corp",
   "dependencies": {
-    "providers": { "@acme/gmail": "^1.0.0" }
+    "integrations": { "@acme/gmail": "^1.0.0" }
   }
 }
 ```
@@ -121,85 +121,98 @@ The SKILL.md frontmatter supports the fields defined by Agent Skills: `name`, `d
 
 See [spec.md, Section 3.3](./spec.md#33-skill-package) for details.
 
-### Tool
+### MCP Server
 
-A tool is a callable capability — executable code that an agent can invoke during agent execution. It consists of a manifest declaring the tool interface and an implementation source file. Where a skill provides instructions (declarative), a tool provides code (executable).
+An MCP server is a runnable tool server — executable code that an agent can invoke during agent execution, exposed over the Model Context Protocol. Where a skill provides instructions (declarative), an MCP server provides tools (executable).
+
+The key design decision: **an AFPS `mcp-server` manifest *is* a verbatim MCP Bundle (MCPB) manifest.** AFPS does not invent its own server-packaging format — it adopts MCPB wholesale. A built `mcp-server` package validates against the MCPB manifest schema and runs unmodified in any MCPB host: rename the `.afps` archive to `.mcpb` and it installs with no conversion step. AFPS-specific metadata travels under the MCPB `_meta` object.
 
 ```text
-@acme/fetch-json.afps
-├── manifest.json     # Tool interface + metadata
-└── tool.ts           # Implementation source file
+@acme/fetch-json.afps   (== a valid .mcpb bundle)
+├── manifest.json       # MCPB manifest + AFPS metadata under _meta
+└── server/             # Bundled server payload (entry_point)
 ```
 
-**`manifest.json`**:
+**`manifest.json`** (an MCPB manifest):
 
 ```json
 {
-  "name": "@acme/fetch-json",
+  "manifest_version": "0.3",
+  "name": "fetch-json",
   "version": "1.0.0",
-  "type": "tool",
-  "displayName": "Fetch JSON",
-  "entrypoint": "tool.ts",
-  "tool": {
-    "name": "fetch_json",
-    "description": "Fetch JSON from a URL and return the parsed response.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "url": { "type": "string", "description": "HTTP or HTTPS URL" }
-      },
-      "required": ["url"]
+  "display_name": "Fetch JSON",
+  "description": "Fetch JSON from a URL and return the parsed response.",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["server/index.js"]
     }
+  },
+  "tools": [
+    { "name": "fetch_json", "description": "Fetch JSON from a URL." }
+  ],
+  "_meta": {
+    "dev.afps/mcp-server": { "name": "@acme/fetch-json", "type": "mcp-server" }
   }
 }
 ```
 
-The `tool` object describes the interface — what the tool is called, what it does, and what parameters it accepts. This metadata is available to consumers without executing the source code.
+The MCPB manifest declares how to run the server (`server.type`, `entry_point`, `mcp_config`); the `tools` array advertises the tools it exposes. The AFPS scoped package identity lives under `_meta["dev.afps/mcp-server"]`, which is what `dependencies.mcp_servers` and an integration's `source.server` reference resolve against.
 
-The `entrypoint` field points to the implementation source file. AFPS does not prescribe the programming language, module format, or execution strategy — those are implementation concerns.
+Because MCP servers contain executable code, they are the highest-risk package type.
+See [spec.md, Section 3.4](./spec.md#34-mcp-server-package) and
+[Section 8.2](./spec.md#82-mcp-server-code-execution) for security considerations.
 
-Because tools contain executable code, they are the highest-risk package type.
-See [spec.md, Section 3.4](./spec.md#34-tool-package) and
-[Section 8.2](./spec.md#82-tool-code-execution) for security considerations.
+### Integration
 
-### Provider
+An integration is a credentialed binding to an external service — it describes how to reach a service and how to authenticate with it. An integration declares a **capability source** (`local` MCP server, `remote` MCP endpoint, or `api` HTTP surface), one or more **auth methods** (`oauth2`, `api_key`, `basic`, or `custom`), and how an acquired credential is **delivered** at runtime. Integrations MAY include an `INTEGRATION.md` companion file at the archive root with concise API documentation optimized for agent consumption.
 
-A provider is a service connector — it describes how to authenticate with an external service. Providers declare an authentication mode (`oauth2`, `oauth1`, `api_key`, `basic`, or `custom`) and the metadata needed to establish a connection. Providers MAY include a `PROVIDER.md` companion file at the archive root containing concise API documentation optimized for agent consumption (key endpoints, request/response examples, common patterns).
-
-**Example** — an API key provider (`manifest.json`):
+**Example** — an API-key integration over an HTTP API (`manifest.json`):
 
 ```json
 {
   "name": "@acme/openai",
   "version": "1.0.0",
-  "type": "provider",
-  "displayName": "OpenAI",
-  "definition": {
-    "authMode": "api_key",
-    "credentials": {
-      "schema": {
-        "type": "object",
-        "properties": {
-          "apiKey": { "type": "string", "description": "API key" }
-        },
-        "required": ["apiKey"]
-      }
-    },
-    "credentialHeaderName": "Authorization",
-    "credentialHeaderPrefix": "Bearer",
-    "authorizedUris": ["https://api.openai.com/*"]
+  "type": "integration",
+  "schema_version": "2.0",
+  "display_name": "OpenAI",
+  "source": { "kind": "api" },
+  "auths": {
+    "api_key": {
+      "type": "api_key",
+      "credentials": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "api_key": { "type": "string", "description": "API key" }
+          },
+          "required": ["api_key"]
+        }
+      },
+      "delivery": {
+        "http": {
+          "in": "header",
+          "name": "Authorization",
+          "prefix": "Bearer ",
+          "value": "{$credential.api_key}"
+        }
+      },
+      "authorized_uris": ["https://api.openai.com/**"]
+    }
   }
 }
 ```
 
-See [spec.md, Section 3.5](./spec.md#35-provider-package) and
-[Section 7](./spec.md#7-provider-authentication) for all auth modes.
+See [spec.md, Section 3.5](./spec.md#35-integration-package) and
+[Section 7](./spec.md#7-integration-authentication) for all auth methods.
 
 ## Key concepts
 
 ### Scoped names
 
-Every AFPS package has a scoped name of the form `@scope/name`. Both segments are lowercase, alphanumeric, and may contain hyphens — but must start and end with a letter or digit. No underscores, no uppercase.
+Every AFPS package has a stable AFPS identity of the form `@scope/name`. Both segments are lowercase, alphanumeric, and may contain hyphens — but must start and end with a letter or digit. No underscores, no uppercase.
 
 ```text
 @acme/customer-intake    valid
@@ -209,12 +222,14 @@ Every AFPS package has a scoped name of the form `@scope/name`. Both segments ar
 acme/agent               invalid (missing @)
 ```
 
-Scopes let registries enforce ownership: only authorized publishers can release packages within a scope.
+For `agent`, `skill`, and `integration` packages this is the top-level `name`. For an `mcp-server`, whose top-level `name` follows MCPB's rules, the AFPS scoped identity lives under `_meta["dev.afps/mcp-server"].name`. Scopes let registries enforce ownership: only authorized publishers can release packages within a scope.
 See [spec.md, Section 2.2](./spec.md#22-package-identity).
 
 ### Semantic versioning
 
 AFPS uses semantic versioning for package identity. Every package declares an exact version (e.g. `1.2.0`), and dependencies can use semver ranges (e.g. `^1.0.0`, `~2.1`).
+
+The AFPS *manifest model* version is tracked separately by `schema_version` (a `MAJOR.MINOR` string such as `2.0`) on `agent`, `skill`, and `integration` manifests. An `mcp-server` has no `schema_version`; its versioning is governed by the MCPB `manifest_version` field.
 
 See [spec.md, Section 2.3](./spec.md#23-versioning).
 
@@ -222,21 +237,21 @@ See [spec.md, Section 2.3](./spec.md#23-versioning).
 
 AFPS packages are distributed as ZIP files. Every archive must contain `manifest.json` at the root. Depending on the package type, additional files are required:
 
-| Type      | Required companion files            |
-|-----------|-------------------------------------|
-| agent     | `prompt.md` (non-empty)             |
-| skill     | `SKILL.md`                          |
-| tool      | Source file referenced by `entrypoint` |
-| provider  | Optional `PROVIDER.md`              |
+| Type         | Required companion files                       |
+|--------------|------------------------------------------------|
+| agent        | `prompt.md` (non-empty)                        |
+| skill        | `SKILL.md`                                     |
+| mcp-server   | Server payload referenced by `server.entry_point` |
+| integration  | Optional `INTEGRATION.md`                      |
 
-Package archives should use the `.afps` file extension (e.g., `customer-intake-1.0.0.afps`). The file is a standard ZIP — any ZIP tool can open it — but the `.afps` extension makes packages immediately recognizable and enables OS-level file association with AFPS-aware tooling.
+Package archives should use the `.afps` file extension (e.g., `customer-intake-1.0.0.afps`). The file is a standard ZIP — any ZIP tool can open it — but the `.afps` extension makes packages immediately recognizable and enables OS-level file association with AFPS-aware tooling. An `mcp-server` archive is additionally a valid `.mcpb` bundle: renaming the extension yields a bundle installable in any MCPB host.
 
 Consumers must sanitize ZIP entries to prevent path traversal attacks.
 See [spec.md, Section 2.5](./spec.md#25-package-archive-format).
 
 ### Dependencies
 
-An agent composes skills, tools, and providers as dependencies. The following diagram shows a typical agent and the packages it depends on:
+An agent composes skills, MCP servers, and integrations as dependencies. The following diagram shows a typical agent and the packages it depends on:
 
 ```text
                   ┌──────────────────────────────────┐
@@ -252,10 +267,10 @@ An agent composes skills, tools, and providers as dependencies. The following di
           ▼              ▼              ▼
   ┌──────────────┐ ┌────────────┐ ┌────────────┐
   │ @acme/gmail  │ │ @acme/     │ │ @acme/     │
-  │ provider     │ │ rewrite-   │ │ fetch-json │
-  │              │ │ tone       │ │            │
-  │ OAuth2 creds │ │ skill      │ │ tool       │
-  │ scopes       │ │ SKILL.md   │ │ source     │
+  │ integration  │ │ rewrite-   │ │ fetch-json │
+  │              │ │ tone       │ │ mcp-server │
+  │ OAuth2 creds │ │ skill      │ │            │
+  │ scopes       │ │ SKILL.md   │ │ MCPB tools │
   └──────────────┘ └────────────┘ └────────────┘
    connection       capability      capability
    "access Gmail"   "rewrite text   "fetch JSON
@@ -269,26 +284,26 @@ All package types use a single `dependencies` field to declare the packages they
 ```json
 {
   "dependencies": {
-    "providers": { "@acme/gmail": "^1.0.0" },
+    "integrations": { "@acme/gmail": "^1.0.0" },
     "skills": { "@acme/rewrite-tone": "^1.0.0" },
-    "tools": { "@acme/fetch-json": "^1.0.0" }
+    "mcp_servers": { "@acme/fetch-json": "^1.0.0" }
   }
 }
 ```
 
-The `dependencies` object is grouped by package type (`providers`, `skills`, `tools`). Each entry maps a scoped package name to a semver range.
+The `dependencies` object is grouped by package type (`integrations`, `skills`, `mcp_servers`). Each entry maps a scoped package name to a semver range.
 
 See [spec.md, Section 4.1](./spec.md#41-dependency-declaration).
 
-### Constrained schema system
+### Schema system
 
-AFPS defines a simplified schema system for three distinct sections in an agent manifest. Although they share the same format, they serve different purposes:
+AFPS describes three distinct sections in an agent manifest with JSON Schema. Although they share the same wrapper format, they serve different purposes:
 
 - **`input`** — per-run data, supplied each time the agent runs (e.g., a search query, a file to process). Consumers should prompt for these values at each run.
 - **`output`** — per-run result, produced at the end of each run (e.g., a summary, a report). Consumers may use this to validate the language model's response.
 - **`config`** — per-deployment settings, configured once and reused across runs (e.g., preferred language, notification threshold). Consumers should persist these values.
 
-The schema format is intentionally smaller than JSON Schema. Every schema must be an object with `type: "object"` and a `properties` map:
+Each section is a wrapper with a required `schema` member (a full JSON Schema 2020-12 object whose container is `type: "object"` with a `properties` map) plus optional AFPS metadata (`ui_hints`, `property_order`, `file_constraints`):
 
 ```json
 {
@@ -307,7 +322,7 @@ The schema format is intentionally smaller than JSON Schema. Every schema must b
       },
       "required": ["query"]
     },
-    "uiHints": {
+    "ui_hints": {
       "query": { "placeholder": "label:inbox newer_than:7d" }
     }
   },
@@ -327,42 +342,46 @@ The schema format is intentionally smaller than JSON Schema. Every schema must b
 }
 ```
 
-Supported property types are `string`, `number`, `boolean`, `array`, `object`, and `file`. The `file` type supports additional hints like `accept`, `maxSize`, `multiple`, and `maxFiles`.
-
-There is no nesting, no `$ref`, no `oneOf`/`anyOf` — the schema is flat by design, optimized for form generation and validation rather than complex data modeling.
+Inside the `schema` member, the full JSON Schema 2020-12 vocabulary is available — composition (`allOf`/`anyOf`/`oneOf`), conditionals (`if`/`then`/`else`), and references (`$ref`, `$defs`). The only AFPS constraint is the container shape: `type: "object"` with a `properties` map. File-upload fields are expressed with standard JSON Schema (`format: "uri"` plus `contentMediaType`); upload constraints such as `accept` and `max_size` live in the `file_constraints` wrapper field.
 
 See [spec.md, Section 5](./spec.md#5-schema-system).
 
-### Provider authentication modes
+### Integration authentication
 
-Provider packages declare one of five authentication modes:
+Integrations declare one or more auth methods under `auths`, keyed by a short identifier. Each method picks an authentication model:
 
-| Mode     | Use case                                | Requires                        |
-|----------|-----------------------------------------|---------------------------------|
-| `oauth2` | Standard OAuth 2.0 services            | `oauth2` sub-object with `authorizationUrl`, `tokenUrl`  |
-| `oauth1` | Legacy OAuth 1.0a services             | `oauth1` sub-object with `requestTokenUrl`, `accessTokenUrl` |
-| `api_key` | API key-based services                 | `credentials` sub-object with `schema`              |
-| `basic`  | HTTP Basic authentication              | `credentials` sub-object with `schema`              |
-| `custom` | Non-standard authentication schemes    | `credentials` sub-object with `schema`              |
+| Type     | Use case                                | Key fields                                                          |
+|----------|-----------------------------------------|---------------------------------------------------------------------|
+| `oauth2` | OAuth 2.0 / OpenID Connect services     | `issuer` (discovery) or `authorization_endpoint` + `token_endpoint` |
+| `api_key` | API key-based services                 | `credentials.schema` + `delivery`                                   |
+| `basic`  | HTTP Basic authentication              | `credentials.schema` + `delivery` (`encoding: "base64"`)            |
+| `custom` | Non-standard schemes / declarative login | `credentials.schema` and/or `connect` flow                          |
 
-Each auth-mode sub-object is extensible — implementations MAY add fields for PKCE support, custom scopes, token endpoint configuration, and other implementation-specific settings. Transversal fields like `authorizedUris` and `allowAllUris` remain at the `definition` level.
+OAuth2 is **discovery-first**: given an `issuer`, a consumer fetches the authorization-server metadata document ([RFC 8414] / OpenID Connect Discovery) and uses its `authorization_endpoint`, `token_endpoint`, PKCE methods, and so on. Discovery is best-effort — every endpoint can be supplied manually for providers that publish no discovery document. Scopes are selected from an AFPS `scope_catalog` (with human labels and `implies` relationships), and every method declares a `delivery` (where the credential is injected: HTTP request, environment variable, or file).
 
-See [spec.md, Section 7](./spec.md#7-provider-authentication).
+Non-OAuth credential acquisition can be described declaratively with a `connect.login` flow, which aligns with the OpenAPI Arazzo request → assert → extract model.
+
+See [spec.md, Section 7](./spec.md#7-integration-authentication).
 
 ### Extension conventions
 
-AFPS manifests are extensible. Unknown fields are preserved by consumers rather than rejected. When adding custom fields to a manifest or nested object, producers should use the `x-` prefix to avoid collisions with future specification fields:
+AFPS manifests are extensible. Unknown fields are preserved by consumers rather than rejected. When adding custom fields, producers place them inside a top-level `_meta` object, keyed by a reverse-DNS namespace:
 
 ```json
 {
   "name": "@acme/my-agent",
   "type": "agent",
-  "x-internal-team": "platform",
-  "x-cost-center": "eng-42"
+  "schema_version": "2.0",
+  "_meta": {
+    "dev.afps/policy": { "tier": "high" },
+    "dev.acme/cost-center": { "code": "eng-42" }
+  }
 }
 ```
 
-This follows the same convention used by OpenAPI and other extensible specifications.
+This adopts the Model Context Protocol `_meta` convention. It is also the only schema-blessed extension point for `mcp-server` packages, whose MCPB manifest schema forbids unknown top-level fields. (The `mcp`/`modelcontextprotocol` prefixes are reserved by MCP and must not be used.)
+
+See [spec.md, Section 10](./spec.md#10-extensibility).
 
 ## What AFPS is NOT
 
@@ -378,14 +397,14 @@ To set clear expectations, here is what AFPS intentionally does not cover:
 
 - **Not a registry protocol.** AFPS defines what packages look like and how dependencies are declared, but it does not define the HTTP API for publishing, searching, or downloading packages.
 
-- **Not a full schema language.** The AFPS schema system is deliberately constrained. It is not JSON Schema. There is no nesting, no composition keywords, and no `$ref` support.
+- **Not a new server-packaging format.** For MCP servers, AFPS adopts MCPB verbatim rather than inventing its own format.
 
 AFPS is a packaging standard. It defines the artifact — the ZIP file, the manifest, the companion files, the dependency declarations — and leaves execution, transport, and discovery to other layers.
 
 ## Further reading
 
-- [Full specification](./spec.md) — the normative AFPS v1.0 draft
-- [Examples](./examples/) — minimal and full examples for each package type
-- [JSON Schema files](./schema/) — machine-readable schema definitions
+- [Full specification](./spec.md) — the normative AFPS v2.0 draft
 - [Governance](./GOVERNANCE.md) — how the specification evolves
 - [Changelog](./CHANGELOG.md) — specification history
+
+[RFC 8414]: https://datatracker.ietf.org/doc/html/rfc8414

@@ -1,5 +1,35 @@
 # Changelog
 
+## v2.0.0 — 2026-05-24
+
+Major, breaking revision. AFPS 2.0 adopts a `snake_case` field vocabulary across all package types, replaces the `tool` and `provider` package types with `mcp-server` and `integration`, and adopts the Model Context Protocol `_meta` mechanism as the single extension point.
+
+### Specification
+
+- **Package types** — the four types are now `agent`, `skill`, `mcp-server`, `integration`. `tool` and `provider` are removed; 2.0 producers MUST NOT emit them. See Appendix D for the 1.x→2.0 migration mapping.
+- **`mcp-server` (§3.4)** — an entirely new model: an `mcp-server` manifest **is** a verbatim MCP Bundle (MCPB) manifest. A built `mcp-server` validates against the MCPB manifest schema and runs unmodified in any MCPB host (rename `.afps` → `.mcpb`). Supersedes the 1.x `tool` type.
+- **`integration` (§3.5, §7)** — supersedes the 1.x `provider` type. Adds an explicit capability `source` (`local` / `remote` / `api`), a multi-method `auths` map, discovery-first OAuth2 using [RFC 8414] / OpenID Connect Discovery vocabulary ([RFC 8707] resource indicators, [RFC 7636] PKCE), a `scope_catalog`, declarative `connect.login` acquisition aligned with OpenAPI Arazzo, and explicit credential `delivery` (`http` / `env` / `files`).
+- **Casing** — all AFPS-defined fields are `snake_case` (e.g. `display_name`, `schema_version`, `integrations_configuration`). Embedded JSON Schema keywords (e.g. `contentMediaType`) retain their standard spelling.
+- **Extensibility (§10)** — the `x-` extension convention is removed in favor of a top-level `_meta` object with reverse-DNS namespaced keys (`dev.afps/…`). `_meta` is the only schema-blessed extension point for `mcp-server` packages, whose MCPB manifest schema forbids unknown top-level fields.
+- **Dependencies (§4)** — `dependencies.providers` → `dependencies.integrations`; `dependencies.tools` → `dependencies.mcp_servers`. Agent `providersConfiguration` → `integrations_configuration`.
+- **Conformance keywords (§1.4)** — full BCP 14 ([RFC 2119] / [RFC 8174]) keyword set.
+- **Schema system (§5)** — clarified that the full JSON Schema 2020-12 vocabulary is supported within `schema` members; the only AFPS constraint is the container shape (`type: "object"` + `properties`).
+- **Migration (Appendix D)** — new appendix mapping 1.x types and camelCase fields to 2.0.
+
+### Schema (`@afps-spec/schema@2.0.0`)
+
+- New `v2/` schemas: `agent`, `skill`, `mcp-server`, `integration`. `mcp-server.schema.json` validates the embedded MCPB manifest.
+- Hosted `$id` pattern: `https://afps.appstrate.dev/packages/schema/v2/<type>.schema.json`.
+- Major version bump (breaking: removed types, renamed fields, removed `x-` convention).
+
+[RFC 2119]: https://datatracker.ietf.org/doc/html/rfc2119
+[RFC 8174]: https://datatracker.ietf.org/doc/html/rfc8174
+[RFC 7636]: https://datatracker.ietf.org/doc/html/rfc7636
+[RFC 8414]: https://datatracker.ietf.org/doc/html/rfc8414
+[RFC 8707]: https://datatracker.ietf.org/doc/html/rfc8707
+
+---
+
 ## v1.2.0 — 2026-05-09
 
 ### Specification

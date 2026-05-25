@@ -1,6 +1,6 @@
 # @afps-spec/types
 
-TypeScript bindings for AFPS 1.3+ contracts.
+TypeScript bindings for AFPS 2.0 contracts.
 
 This package is the canonical TS projection of the language-agnostic
 AFPS specification (see [`afps-spec/spec.md`](https://github.com/appstrate/afps-spec/blob/main/spec.md)).
@@ -10,7 +10,7 @@ vocabulary without coupling to a specific implementation.
 
 ## What's in
 
-- **Manifest refs** (`DependencyRef`, `ToolRef`, `ProviderRef`, `SkillRef`, `JSONSchema`) — parallel to the Zod schemas in `@afps-spec/schema`.
+- **Manifest refs** (`DependencyRef`, `SkillRef`, `McpServerRef`, `IntegrationRef`, `JSONSchema`) — parallel to the Zod schemas in `@afps-spec/schema`.
 - **Tool protocol** (`Tool`, `ToolContext`, `ToolResult`) — the shape every AFPS tool implementation MUST satisfy.
 - **Wire envelope** (`RunEvent`) — open event shape flowing from tools to sinks.
 

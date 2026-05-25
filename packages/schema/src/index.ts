@@ -2,32 +2,51 @@
 // Copyright (c) 2026 Appstrate contributors
 
 /**
- * @afps/schema — AFPS Zod schemas for manifest validation.
+ * @afps-spec/schema — AFPS 2.0 Zod schemas for manifest validation.
  *
- * Default exports are AFPS v1 schemas. Use createSchemas(majorVersion)
+ * Default exports are AFPS v2 schemas. Use createSchemas(majorVersion)
  * to generate schemas for a specific version.
  */
 
 export {
+  // Factory
   createSchemas,
+  // Top-level manifest schemas
   agentManifestSchema,
   skillManifestSchema,
-  toolManifestSchema,
-  providerManifestSchema,
-  // Shared sub-schemas — reusable by consumers
-  authModeEnum,
-  providerDefinition,
-  oauth2Config,
-  oauth1Config,
-  credentialsConfig,
-  oauthTokenAuthMethodEnum,
-  oauthTokenContentTypeEnum,
-  credentialTransform,
-  credentialTransformEncodingEnum,
-  uploadProtocolEnum,
-  providerConfiguration,
-  setupGuide,
+  mcpServerManifestSchema,
+  integrationManifestSchema,
+  // Shared primitives / sub-schemas — reusable by consumers
+  scopedName,
+  packageTypeEnum,
+  metaSchema,
   schemaObject,
+  schemaWrapper,
+  integrationConfiguration,
+  // mcp-server (§3.4)
+  mcpServerTypeEnum,
+  mcpServerAfpsMeta,
+  // integration source (§7.1)
+  integrationSource,
+  transportEnum,
+  uploadProtocolEnum,
+  // integration auth (§7.2 – §7.10)
+  authTypeEnum,
+  authMethod,
+  tokenEndpointAuthMethodEnum,
+  credentialsConfig,
+  deliverySchema,
+  deliveryEncodingEnum,
+  connectSchema,
+  setupGuide,
   // JSON Schema generation helper
   afpsJsonSchemaOverride,
+} from "./schemas.ts";
+
+export type {
+  AgentManifest,
+  SkillManifest,
+  McpServerManifest,
+  IntegrationManifest,
+  PackageType,
 } from "./schemas.ts";
