@@ -52,8 +52,8 @@ const entries = [
     title: "AFPS MCP-Server Manifest",
     description:
       "Manifest schema for AFPS 2.0 mcp-server packages. " +
-      "The manifest is an MCP Bundle (MCPB) manifest; the MCPB schema is authoritative for top-level fields " +
-      'and the AFPS identity contract lives under _meta["dev.afps/mcp-server"].',
+      "The manifest is AFPS-native at the root (type, schema_version, scoped name, dependencies) and adopts " +
+      "the MCPB field vocabulary (manifest_version, server, tools, user_config) verbatim; it is not a strict MCPB manifest.",
     schema: mcpServerManifestSchema,
   },
   {

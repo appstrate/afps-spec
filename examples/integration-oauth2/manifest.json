@@ -55,7 +55,7 @@
         "https://www.googleapis.com/gmail/*"
       ],
       "allow_all_uris": false,
-      "callback_url_hint": "Set the authorized redirect URI to: {{callbackUrl}}"
+      "callback_url_hint": "Set the authorized redirect URI to: {{callback_url}}"
     }
   },
   "setup_guide": {

@@ -67,6 +67,7 @@ This draft is published for community review and early implementation feedback. 
   - [7.8 Per-Tool Policy](#78-per-tool-policy)
   - [7.9 URI Restrictions](#79-uri-restrictions)
   - [7.10 Setup Guide](#710-setup-guide)
+  - [7.11 OpenAPI Security Scheme Mapping (Informative)](#711-openapi-security-scheme-mapping-informative)
 - [8. Security Considerations](#8-security-considerations)
   - [8.1 Archive Processing](#81-archive-processing)
   - [8.2 MCP-Server Code Execution](#82-mcp-server-code-execution)
@@ -134,26 +135,31 @@ AFPS is transport-agnostic: it does not prescribe how packages are fetched, tran
 
 ### 1.2.1 Relationship to Other Standards
 
-AFPS operates at a different abstraction level than existing AI agent standards. The key distinction is between **goal** (what should be accomplished) and **capability** (how to accomplish a specific task):
+AFPS occupies the **packaging-and-composition** layer: one archive declares an agent's goal and every skill, MCP server, and integration it depends on, with versioned dependencies between them. Existing AI standards each package a single artifact type (MCPB → one MCP server; Agent Skills → one skill; A2A AgentCard → one runtime agent endpoint); AFPS composes all four artifact types in a single distribution archive.
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  Goal layer          AFPS Agent                         │
-│                      "Process my inbox and create       │
-│                       a summary of support requests"    │
-│                      = the user's intent, packaged      │
-├─────────────────────────────────────────────────────────┤
-│  Capability layer    AFPS Skills / MCP Servers          │
-│                      "Rewrite text in a professional    │
-│                       tone" / "List Gmail messages"     │
-│                      = reusable abilities the agent     │
-│                        can draw on to reach the goal    │
-├─────────────────────────────────────────────────────────┤
-│  Connection layer    AFPS Integrations                  │
-│                      "Gmail via OAuth2"                 │
-│                      = authenticated access to          │
-│                        external services                │
-└─────────────────────────────────────────────────────────┘
+─────────────────────────────────────────────────────────────
+Distribution    AFPS Registry · npm · OCI · any HTTP store     not in spec —
+                (hosts versioned .afps archives)               transport-agnostic
+─────────────────────────────────────────────────────────────
+                                ▲ publish / fetch
+─────────────────────────────────────────────────────────────
+Packaging       AFPS .afps (ZIP) — manifest.json + companions  this spec
+(this spec)       ├── agent       (NEW)
+                  ├── skill       (extends Agent Skills)
+                  ├── mcp-server  (adopts MCPB vocab)
+                  └── integration (source + auths + delivery)
+─────────────────────────────────────────────────────────────
+                                ▲ consumed by
+─────────────────────────────────────────────────────────────
+Runtime         Agent runtime executes prompt.md, resolves     not in spec
+                dependencies, applies integration auth
+─────────────────────────────────────────────────────────────
+                                ▲ talks to services via
+─────────────────────────────────────────────────────────────
+Wire protocols  MCP (tool calls) · HTTP/REST · A2A             not in spec
+                (agent-to-agent)
+─────────────────────────────────────────────────────────────
 ```
 
 An agent's `prompt.md` replaces what a human would type to give an agent its objective. Skills, MCP servers, and integrations are the resources the agent uses to fulfill that objective. AFPS packages all of these together into a portable, versioned artifact.
@@ -443,14 +449,19 @@ All manifests are JSON objects. Unknown top-level fields and unknown nested fiel
 #### `dependencies`
 - **Type**: object
 - **Required**: MAY
-- **Format**: object containing optional `skills`, `mcp_servers`, and `integrations` maps. Values MUST be valid semver ranges.
+- **Format**: object containing optional `skills`, `mcp_servers`, and `integrations` maps. Each entry is either a semver-range string (compact form) or an object whose `version` field carries the semver range plus per-dependency configuration (full normative shape in §4.1). For `integrations`, the object form accepts `scopes` and `auth_key` (§7.4, §7.2). Consumers MUST accept both forms; producers MAY use whichever is appropriate.
 - **Description**: Declares packages that this package depends on. Consumers use this field for dependency resolution, installation, and composition.
-- **Example**: `{ "integrations": { "@example/gmail": "^1.0.0" }, "skills": { "@example/rewrite-tone": "^1.0.0" } }`
+- **Example (compact)**: `{ "integrations": { "@example/gmail": "^1.0.0" }, "skills": { "@example/rewrite-tone": "^1.0.0" } }`
+- **Example (object form)**: `{ "integrations": { "@example/gmail": { "version": "^1.0.0", "scopes": ["gmail.readonly"], "auth_key": "oauth" } } }`
 - **Default**: none
 
 ### 3.2 Agent Manifest
 
 Agent manifests extend the common fields above. A conforming agent manifest MUST include `schema_version`, `display_name`, and `author` (§3.1). Per-integration runtime configuration (such as requested OAuth scopes) is declared inside the dependency entry under `dependencies.integrations` (§4.1) using the object form.
+
+#### Required files
+
+An `agent` archive MUST contain `manifest.json` at the archive root and a non-empty `prompt.md` companion file (§6.1). `prompt.md` carries the agent's objective — the instructions sent to the language model. All other agent fields below are manifest fields.
 
 #### `input`
 - **Type**: object
@@ -584,7 +595,7 @@ An integration is service-centric: the service (for example Gmail, Stripe) is th
 
 #### Common fields
 
-An integration manifest uses the common fields (§3.1): `name` (scoped), `version`, `type: "integration"`, `schema_version`, `display_name`, and optional `description`, `keywords`, `icon`, `license`, `repository`.
+An integration manifest uses the common fields (§3.1): `name` (scoped), `version`, `type: "integration"`, `schema_version`, `display_name`, and any of the optional common fields — `description`, `long_description`, `keywords`, `license`, `author`, `homepage`, `documentation`, `support`, `repository`, `icon`, `icons`, `screenshots`, `privacy_policies`, `compatibility`, `dependencies`, `_meta`. No common field is excluded for integrations; the integration-specific fields (`source`, `auths`, …) are added on top.
 
 #### `source`
 - **Type**: object
@@ -681,7 +692,7 @@ A package MUST NOT declare a dependency on itself. Consumers SHOULD detect circu
 
 The sibling `integrations_configuration` map keyed by integration package id is **deprecated** in AFPS 2.0. Per-integration configuration (such as requested OAuth scopes or auth-method selection) is now declared inline inside `dependencies.integrations.<id>` using the object dependency form (§4.1).
 
-Consumers MUST keep accepting the deprecated `integrations_configuration` map for backward compatibility. When both forms are present for the same integration, the dependency-entry object form takes precedence and the deprecated map MUST be ignored for that integration.
+Consumers MUST keep accepting the deprecated `integrations_configuration` map for backward compatibility and MUST merge it into the dependency entries at load time. The merge is per-field: any field present in the dependency-entry object form (`scopes`, `auth_key`, etc.) takes precedence over the same field in the deprecated map; fields only present in the deprecated map are carried through as if they had been declared in the dependency entry. The deprecated map is otherwise opaque to consumers.
 
 ## 5. Schema System
 
@@ -822,7 +833,7 @@ A consumer MAY construct an execution context from:
 - `prompt.md`;
 - validated `input` and `config` data;
 - resolved skills, MCP servers, and integrations; and
-- integration configuration under `integrations_configuration`.
+- per-integration configuration declared inside the agent's `dependencies.integrations.<id>` entries (§4.1) — `scopes`, `auth_key`, and any future per-dependency fields. Manifests that still carry the deprecated top-level `integrations_configuration` map (§4.4) SHOULD be normalized into the dependency-entry form before construction; consumers MUST accept the deprecated form as a fallback per §4.4.
 
 AFPS does not define prompt templating, state persistence, scheduling, or transport semantics. Those concerns are out of scope.
 
@@ -913,7 +924,7 @@ OAuth scopes are declared in two AFPS fields, distinct from the non-authoritativ
 #### `default_scopes`
 - **Type**: array of strings
 - **Required**: MAY
-- **Description**: The baseline scope set requested when an agent does not request a narrower or wider set. The effective requested scopes for an agent are computed from `integrations_configuration.<id>.scopes` (§4.4), defaulting to `default_scopes` when unspecified.
+- **Description**: The baseline scope set requested when an agent does not request a narrower or wider set. The effective requested scopes for an agent are computed from the agent's `dependencies.integrations.<id>.scopes` entry (§4.1, object form), defaulting to `default_scopes` when unspecified. The deprecated top-level `integrations_configuration.<id>.scopes` map (§4.4) is accepted as a fallback when no object-form `scopes` is present.
 
 #### `scope_catalog`
 - **Type**: array of objects
@@ -940,6 +951,8 @@ For auth methods of `type` `api_key`, `basic`, `mtls`, or `custom`, `credentials
 ### 7.6 Credential Delivery
 
 `delivery` declares where an acquired credential is injected at runtime. At least one of `{http, env, files}` MUST be declared per auth method.
+
+The block below is a **syntax catalogue** showing all three delivery shapes; it is NOT a valid single `delivery` object. `http` is mutually exclusive with `env`/`files` (see the rule after this block), so a real auth method declares either `http` alone, or any combination of `env` and `files`.
 
 ```jsonc
 "delivery": {
@@ -1029,7 +1042,7 @@ Value templates use the runtime-expression grammar of §7.7 (`{$credential.<fiel
   - an **AFPS extractor object** that extends Arazzo for cases the Selector Object cannot express:
     - `{ "from": "cookie", "name": "<cookie-name>" }`;
     - `{ "from": "jwt", "token": "{$outputs.<name>}", "path": "/<json-pointer>" }`;
-    - `{ "from": "regex", "source": "{$response.body}", "pattern": "<regex>", "group": <n> }` — note: the equivalent Arazzo Selector Object form (when only a single capture is needed) is `{ "context": "...", "selector": "<regex>", "type": "regex" }` carried inside a Criterion; AFPS keeps `from: regex` as the output-side spelling for symmetry with `cookie`/`jwt`. Producers MAY emit either; consumers MUST accept both.
+    - `{ "from": "regex", "source": "{$response.body}", "pattern": "<regex>", "group": <n> }` — note: Arazzo expresses regular-expression matching only on the *assertion* side, via a Criterion with `type: "regex"` (Arazzo Criterion `type ∈ simple | regex | jsonpath | xpath`); the Arazzo Selector Object used on the *output* side does not offer a `regex` type (its `type ∈ jsonpath | xpath | jsonpointer`). AFPS therefore introduces `from: "regex"` as an output-side extractor with no direct Selector Object equivalent, spelled for symmetry with `cookie`/`jwt`.
 - **`expires_in_output`** — the name of the output that carries credential expiry.
 - **`identity_outputs`** — the names of outputs that establish the connection identity.
 - **`limits`** — OPTIONAL request guardrails: `request_timeout_ms`, `max_response_bytes`.
@@ -1177,7 +1190,7 @@ OAuth discovery (§7.3) and credential schemas (§7.5) involve fetching or resol
 AFPS packages may process personally identifiable information (PII) through agent inputs, integration connections, and execution outputs:
 
 - consumers SHOULD document which data is transmitted to external services during agent execution;
-- consumers SHOULD provide users with visibility into what data an agent accesses via its `dependencies` and `integrations_configuration` declarations;
+- consumers SHOULD provide users with visibility into what data an agent accesses via its `dependencies` declarations (including per-integration `scopes` in the object form per §4.1, or the deprecated `integrations_configuration` map per §4.4);
 - consumers SHOULD ensure that execution state, credentials, and intermediate data are appropriately managed according to data protection requirements;
 - registries SHOULD NOT require or store PII in package manifests beyond the `author` field.
 

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://afps.appstrate.dev/packages/schema/v2/integration.schema.json",
+  "name": "@example/fetch-json-authenticated",
+  "version": "1.0.0",
+  "type": "integration",
+  "schema_version": "2.0",
+  "display_name": "Fetch JSON (authenticated)",
+  "description": "Credentialed binding over the @example/fetch-json MCP server: the integration applies an API key on top of the local server via environment-variable delivery.",
+  "keywords": ["http", "api"],
+  "source": {
+    "kind": "local",
+    "server": {
+      "name": "@example/fetch-json",
+      "version": "^1.0.0"
+    }
+  },
+  "auths": {
+    "api_key": {
+      "type": "api_key",
+      "credentials": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "api_key": {
+              "type": "string",
+              "description": "Upstream API key"
+            }
+          },
+          "required": ["api_key"]
+        }
+      },
+      "delivery": {
+        "env": {
+          "FETCH_JSON_API_KEY": {
+            "value": "{$credential.api_key}",
+            "sensitive": true,
+            "user_config_key": "api_key"
+          }
+        }
+      }
+    }
+  }
+}
