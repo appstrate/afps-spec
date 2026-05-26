@@ -285,15 +285,16 @@ export const integrationSource = z.discriminatedUnion("kind", [
 // ─────────────────────────────────────────────
 
 /** Authentication model selector (§7.2). */
-export const authTypeEnum = z.enum(["oauth2", "api_key", "basic", "custom"]);
+export const authTypeEnum = z.enum(["oauth2", "api_key", "basic", "mtls", "custom"]);
 
 /**
  * OAuth2 token endpoint client-authentication method (§7.3). RFC 7591 / OIDC
- * Core vocabulary; `client_secret_post` is the consumer default (Appendix C).
+ * Core vocabulary; `client_secret_basic` is the consumer default (RFC 8414 §2,
+ * RFC 7591 §2, Appendix C).
  */
 export const tokenEndpointAuthMethodEnum = z.enum([
-  "client_secret_post",
   "client_secret_basic",
+  "client_secret_post",
   "none",
 ]);
 
@@ -305,7 +306,7 @@ const scopeCatalogEntry = z.looseObject({
   implies: z.array(z.string()).optional(),
 });
 
-/** Credential schema container for api_key/basic/custom (§7.5). */
+/** Credential schema container for api_key/basic/mtls/custom (§7.5). */
 export const credentialsConfig = z.looseObject({
   schema: schemaObject,
 });
@@ -488,7 +489,7 @@ function refineAuthMethod(
           "oauth2 auth method requires `issuer` (for discovery) OR both `authorization_endpoint` and `token_endpoint`",
       });
     }
-  } else if (type === "api_key" || type === "basic" || type === "custom") {
+  } else if (type === "api_key" || type === "basic" || type === "mtls" || type === "custom") {
     // §7.5 — credentials.schema is REQUIRED.
     const creds = method.credentials as Record<string, unknown> | undefined;
     if (!creds || creds.schema === undefined) {

@@ -19,7 +19,7 @@
       "issuer": "https://accounts.google.com",
       "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
       "token_endpoint": "https://oauth2.googleapis.com/token",
-      "token_endpoint_auth_method": "client_secret_post",
+      "token_endpoint_auth_method": "client_secret_basic",
       "authorization_params": {
         "access_type": "offline",
         "prompt": "consent"

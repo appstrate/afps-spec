@@ -167,7 +167,7 @@ See [spec.md, Section 3.4](./spec.md#34-mcp-server-package) and
 
 ### Integration
 
-An integration is a credentialed binding to an external service — it describes how to reach a service and how to authenticate with it. An integration declares a **capability source** (`local` MCP server, `remote` MCP endpoint, or `api` HTTP surface), one or more **auth methods** (`oauth2`, `api_key`, `basic`, or `custom`), and how an acquired credential is **delivered** at runtime. Integrations MAY include an `INTEGRATION.md` companion file at the archive root with concise API documentation optimized for agent consumption.
+An integration is a credentialed binding to an external service — it describes how to reach a service and how to authenticate with it. An integration declares a **capability source** (`local` MCP server, `remote` MCP endpoint, or `api` HTTP surface), one or more **auth methods** (`oauth2`, `api_key`, `basic`, `mtls`, or `custom`), and how an acquired credential is **delivered** at runtime. Integrations MAY include an `INTEGRATION.md` companion file at the archive root with concise API documentation optimized for agent consumption.
 
 **Example** — an API-key integration over an HTTP API (`manifest.json`):
 

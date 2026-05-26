@@ -198,7 +198,7 @@ AFPS runtime on top).
 ```jsonc
 "auths": {
   "oauth": {
-    "type": "oauth2",                          // oauth2 | api_key | basic | custom
+    "type": "oauth2",                          // oauth2 | api_key | basic | mtls | custom
 
     // ── Discovery-first OAuth (D5) ──────────────────────────────
     "issuer": "https://accounts.google.com",   // AFPS fetches its .well-known
@@ -207,7 +207,7 @@ AFPS runtime on top).
     "authorization_endpoint": "…",             // RFC 8414
     "token_endpoint": "…",                     // RFC 8414
     "userinfo_endpoint": "…",                  // OIDC Discovery (not 8414)
-    "token_endpoint_auth_method": "client_secret_post",  // RFC 7591 + OIDC Core values
+    "token_endpoint_auth_method": "client_secret_basic", // RFC 7591 + OIDC Core; default per RFC 8414 §2 / RFC 7591 §2
     "code_challenge_methods_supported": ["S256"],        // RFC 8414 (PKCE as array)
     "resource": "https://www.googleapis.com",  // RFC 8707 (NOT "audience")
     "authorization_params": { "access_type": "offline" }, // extra authorize params (AFPS)
@@ -247,7 +247,9 @@ Notes:
   (`{path}/.well-known/openid-configuration`); strip trailing `/`; validate returned
   `issuer` equals the requested issuer.
 - `credentials.schema` (JSON Schema 2020-12, §4.4) is REQUIRED for
-  `api_key`/`basic`/`custom`; it declares the user-supplied credential bag shape.
+  `api_key`/`basic`/`mtls`/`custom`; it declares the user-supplied credential bag shape.
+  For `mtls`, the schema describes the client certificate (PEM), private key (PEM),
+  and optional intermediate chain.
 
 ### 6.4 `delivery` — where the acquired credential goes (D7)
 

@@ -1,5 +1,46 @@
 # Changelog
 
+## v2.0.1 — 2026-05-26
+
+Post-release clarifications and corrections from the SOTA alignment audit
+(`claudedocs/spec-audit-2026-05-26.md`). No breaking-by-design changes; one
+default value corrected to match the upstream RFC, one additive auth type.
+
+### Specification
+
+- **§4.1 / §3.4 / Appendix A** — clarified that on `mcp-server` packages,
+  `dependencies` MUST live under `_meta["dev.afps/mcp-server"].dependencies`
+  (the MCPB schema forbids unknown top-level fields). Producers MUST NOT emit a
+  top-level `dependencies` field on an `mcp-server` manifest.
+- **Appendix A (`author`, `repository`)** — annotated the rows to note that the
+  object form is the only valid shape on `mcp-server` (MCPB schema rejects the
+  string shorthand).
+- **Appendix A (`compatibility`)** — annotated the row to note that on
+  `mcp-server` the field follows the MCPB strict shape
+  (`{ claude_desktop?, platforms?, runtimes? }` with `python`/`node` runtimes
+  only); the AFPS-extended `clients?` map applies to `agent`/`skill`/`integration`
+  only.
+- **§7.3 / Appendix A / Appendix C** — `token_endpoint_auth_method` default
+  realigned to `client_secret_basic` per [RFC 8414] §2 and [RFC 7591] §2.
+  Previously listed `client_secret_post`, which contradicted the RFC default.
+- **§7.2 / §7.5 / §7.11 / Appendix A** — new auth-method `type: "mtls"` for
+  mutual TLS client authentication. `credentials.schema` is REQUIRED and
+  SHOULD describe the client certificate, private key, and optional chain.
+  Maps to OpenAPI `mutualTLS` (3.1+).
+
+### Schema (`@afps-spec/schema@2.0.1`)
+
+- `authTypeEnum` adds `"mtls"`.
+- `tokenEndpointAuthMethodEnum` order changed to list `"client_secret_basic"`
+  first (cosmetic; the enum members are unchanged).
+- `refineAuthMethod` now requires `credentials.schema` for `mtls`.
+- Conformance test renamed and extended to cover `mtls`.
+
+[RFC 7591]: https://datatracker.ietf.org/doc/html/rfc7591
+[RFC 8414]: https://datatracker.ietf.org/doc/html/rfc8414
+
+---
+
 ## v2.0.0 — 2026-05-24
 
 Major, breaking revision. AFPS 2.0 adopts a `snake_case` field vocabulary across all package types, replaces the `tool` and `provider` package types with `mcp-server` and `integration`, and adopts the Model Context Protocol `_meta` mechanism as the single extension point.

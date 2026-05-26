@@ -556,7 +556,7 @@ All MCPB manifest fields, constraints, and defaults are governed by the MCPB man
 
 The MCPB manifest schema forbids unknown top-level fields. All AFPS-specific data therefore MUST live under the MCPB `_meta` object (§10), never as additional top-level fields:
 
-- `_meta["dev.afps/mcp-server"]`: the portable, vendor-neutral AFPS contract for this server. It MUST carry the AFPS package identity `name` (a scoped name per §2.2) and `type: "mcp-server"`, and MAY carry other AFPS-model fields. This is the identity an `integration.source.server` reference resolves against (§7.1) and the coordinate used in `dependencies.mcp_servers` (§4).
+- `_meta["dev.afps/mcp-server"]`: the portable, vendor-neutral AFPS contract for this server. It MUST carry the AFPS package identity `name` (a scoped name per §2.2) and `type: "mcp-server"`, and MAY carry other AFPS-model fields — including `dependencies` (§4.1), which on `mcp-server` is hosted here rather than at the manifest root because MCPB forbids unknown top-level fields. This is the identity an `integration.source.server` reference resolves against (§7.1) and the coordinate used in `dependencies.mcp_servers` (§4).
 - `_meta["dev.appstrate/…"]`: implementation-only hints (for example, bundler provenance or source-resolution metadata) that no other runtime needs.
 
 Consumers MUST NOT fail on unknown `_meta` keys (§10).
@@ -624,6 +624,8 @@ A package declares its dependencies using the `dependencies` field. The field co
 ```
 
 Each map entry is an AFPS package identity (§2.2) paired with a **dependency value**. Dependency keys MUST be valid scoped names matching the pattern defined in §2.2. All package types MAY declare dependencies.
+
+For `agent`, `skill`, and `integration` packages, `dependencies` is a top-level manifest field. For `mcp-server` packages the MCPB manifest schema forbids unknown top-level fields (§3.4), so `dependencies` MUST instead be carried inside `_meta["dev.afps/mcp-server"].dependencies` with the same shape; producers MUST NOT emit a top-level `dependencies` field on an `mcp-server` manifest.
 
 A dependency value takes one of two shapes:
 
@@ -863,6 +865,7 @@ A source whose surface is not a local MCP server (`remote`, or any non-local API
 - `oauth2` — OAuth 2.0 / OpenID Connect (§7.3);
 - `api_key` — a user-supplied API key or token, described by `credentials.schema` (§7.5);
 - `basic` — HTTP Basic credentials, described by `credentials.schema` (§7.5);
+- `mtls` — mutual TLS client authentication. The user-supplied client certificate and private key (and optional intermediate chain) are described by `credentials.schema` (§7.5); they are injected via `delivery.files` (§7.6) at well-known paths the underlying HTTP client loads. Maps to OpenAPI `mutualTLS` (§7.11);
 - `custom` — credentials acquired by a declarative `connect` flow (§7.7) or supplied directly, described by `credentials.schema` (§7.5).
 
 Every auth method MUST declare `delivery` (§7.6) — where its credential is injected at runtime. An auth method MAY declare `authorized_uris` / `allow_all_uris` (§7.9).
@@ -883,7 +886,7 @@ These fields use the snake_case field names defined by [RFC 8414] and [OpenID Co
 - `authorization_endpoint` (string, URI) — REQUIRED when discovery is unavailable. [RFC 8414]
 - `token_endpoint` (string, URI) — REQUIRED when discovery is unavailable. [RFC 8414]
 - `userinfo_endpoint` (string, URI) — OPTIONAL. [OpenID Connect Discovery]
-- `token_endpoint_auth_method` (string) — OPTIONAL. One of the values defined by [RFC 7591] / [OpenID Connect Core], e.g. `client_secret_post` (default), `client_secret_basic`, `none`.
+- `token_endpoint_auth_method` (string) — OPTIONAL. One of the values defined by [RFC 7591] / [OpenID Connect Core], e.g. `client_secret_basic` (default per [RFC 8414] §2 / [RFC 7591] §2), `client_secret_post`, `none`.
 - `code_challenge_methods_supported` (array of strings) — OPTIONAL; PKCE methods, e.g. `["S256"]`. [RFC 8414] / [RFC 7636]. A consumer SHOULD use `S256` when supported. When a provider supports PKCE but does not advertise it, a manifest MAY supply `["S256"]` as a manual override.
 - `resource` (string, URI) — OPTIONAL; the protected-resource indicator sent on authorization and token requests per [RFC 8707]. This field is named `resource`, not `audience`. A consumer SHOULD send it for forward compatibility even when the authorization server is known to ignore it; the resource server MUST independently validate the token audience.
 - `authorization_params` (object) — OPTIONAL; additional query parameters appended to the authorization request (an AFPS field), e.g. `{ "access_type": "offline" }`.
@@ -924,7 +927,7 @@ OAuth scopes are declared in two AFPS fields, distinct from the non-authoritativ
 
 ### 7.5 Credential Schema
 
-For auth methods of `type` `api_key`, `basic`, or `custom`, `credentials.schema` is REQUIRED. It declares the shape of the user-supplied credential bag.
+For auth methods of `type` `api_key`, `basic`, `mtls`, or `custom`, `credentials.schema` is REQUIRED. It declares the shape of the user-supplied credential bag. For `mtls`, the schema SHOULD describe the client certificate (PEM), the private key (PEM), and an optional intermediate chain.
 
 - `credentials.schema` MUST be a self-contained JSON Schema 2020-12 document (the dialect adopted by §5). Each property defines a credential field the user must supply.
 - Any `$ref` inside `credentials.schema` MUST be a local fragment-only pointer (`#/...`). External or remote `$ref` MUST NOT be used. This keeps credential schemas offline-validatable and prevents schema-fetch SSRF (§8.7).
@@ -1085,6 +1088,7 @@ An AFPS auth method maps onto an [OpenAPI] Security Scheme (also used by [A2A] `
 | `oauth2` | `{ "type": "oauth2", "flows": { ... } }` — flows derived from `authorization_endpoint`/`token_endpoint`/`default_scopes`/`scope_catalog` |
 | `api_key` | `{ "type": "apiKey", "in": "<delivery.http.in>", "name": "<delivery.http.name>" }` — when `delivery.http` is declared |
 | `basic` | `{ "type": "http", "scheme": "basic" }` |
+| `mtls` | `{ "type": "mutualTLS" }` (OpenAPI 3.1+) |
 | `custom` | not standardly representable; SHOULD be omitted from a derived OpenAPI document or recorded under `_meta` (§10) |
 
 This mapping is informative and does not impose normative requirements on AFPS consumers.
@@ -1265,8 +1269,8 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `long_description` | all manifests | string | MAY | Markdown long-form description (MCPB-aligned) | none |
 | `keywords` | all manifests | string[] | MAY | arbitrary strings | none |
 | `license` | all manifests | string | MAY | SPDX identifier RECOMMENDED | none |
-| `author` | all manifests | string \| object | MUST for agent; MAY for others | string form, or `{ name (REQUIRED), email?, url? }` (MCPB/npm-aligned) | none |
-| `repository` | all manifests | string \| object | MAY | URI string, or `{ type, url, directory? }` (MCPB/npm-aligned) | none |
+| `author` | all manifests | string \| object | MUST for agent; MAY for others | string form, or `{ name (REQUIRED), email?, url? }` (MCPB/npm-aligned); **object form only for `mcp-server`** (MCPB schema rejects the string shorthand) | none |
+| `repository` | all manifests | string \| object | MAY | URI string, or `{ type, url, directory? }` (MCPB/npm-aligned); **object form (with both `type` and `url` REQUIRED) only for `mcp-server`** (MCPB schema rejects the string shorthand) | none |
 | `homepage` | all manifests | string | MAY | URI; package homepage (MCPB-aligned) | none |
 | `documentation` | all manifests | string | MAY | URI; documentation page (MCPB-aligned) | none |
 | `support` | all manifests | string | MAY | URI; support/issues (MCPB-aligned) | none |
@@ -1274,9 +1278,9 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `icons` | all manifests | object[] | MAY | `[{ src, size?, theme? }]` (MCPB-aligned) | none |
 | `screenshots` | all manifests | string[] | MAY | image paths/URIs (MCPB-aligned) | none |
 | `privacy_policies` | all manifests | string[] | MAY | privacy-policy URIs (MCPB-aligned) | none |
-| `compatibility` | all manifests | object | MAY | `{ platforms?, runtimes?, clients? }` (MCPB-aligned) | none |
+| `compatibility` | all manifests | object | MAY | `{ platforms?, runtimes?, clients? }` (MCPB-aligned for `agent`/`skill`/`integration`); on `mcp-server` the field follows the MCPB strict shape (`{ claude_desktop?, platforms? (enum `darwin\|win32\|linux`), runtimes? (`python`/`node` only) }`), no `clients` map | none |
 | `schema_version` | agent, skill, integration | string | MUST for agent; MAY for skill, integration | `MAJOR.MINOR`; producers MUST emit `2.0`; n/a for mcp-server | none |
-| `dependencies` | all manifests | object | MAY | optional dependency maps | none |
+| `dependencies` | all manifests | object | MAY | optional dependency maps; on `mcp-server` hosted under `_meta["dev.afps/mcp-server"].dependencies` rather than at the manifest root (MCPB forbids unknown top-level fields, §3.4 / §4.1) | none |
 | `dependencies.skills` | all manifests | map | MAY | keys scoped names; values semver range string or `{ version, ... }` (§4.1) | none |
 | `dependencies.mcp_servers` | all manifests | map | MAY | keys scoped names; values semver range string or `{ version, ... }` (§4.1) | none |
 | `dependencies.integrations` | all manifests | map | MAY | keys scoped names; values semver range string or `{ version, scopes?, auth_key? }` (§4.1) | none |
@@ -1304,12 +1308,12 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `source.api` | integration | object | MUST for `kind=api` | `{ upload_protocols?: open string array }` | none |
 | `source.api.upload_protocols` | integration | string[] | MAY | open array; reserved values: `google-resumable`, `s3-multipart`, `tus`, `ms-resumable`. Custom protocols SHOULD use a reverse-DNS prefix | none |
 | `auths` | integration | object | MUST | map keyed by `^[a-z][a-z0-9_]*$`; ≥1 entry | none |
-| `auths.<key>.type` | integration | string | MUST | `oauth2\|api_key\|basic\|custom` | none |
+| `auths.<key>.type` | integration | string | MUST | `oauth2\|api_key\|basic\|mtls\|custom` | none |
 | `auths.<key>.issuer` | integration | string | SHOULD for oauth2 | OAuth/OIDC issuer; enables discovery | none |
 | `auths.<key>.authorization_endpoint` | integration | string | MUST for oauth2 w/o discovery | RFC 8414 | none |
 | `auths.<key>.token_endpoint` | integration | string | MUST for oauth2 w/o discovery | RFC 8414 | none |
 | `auths.<key>.userinfo_endpoint` | integration | string | MAY | OIDC Discovery | none |
-| `auths.<key>.token_endpoint_auth_method` | integration | string | MAY | RFC 7591 / OIDC Core values; `client_secret_post` default | none |
+| `auths.<key>.token_endpoint_auth_method` | integration | string | MAY | RFC 7591 / OIDC Core values; `client_secret_basic` default (RFC 8414 §2, RFC 7591 §2) | none |
 | `auths.<key>.code_challenge_methods_supported` | integration | string[] | MAY | PKCE methods, e.g. `["S256"]` (RFC 8414 / RFC 7636) | none |
 | `auths.<key>.resource` | integration | string | MAY | RFC 8707 resource indicator (not `audience`) | none |
 | `auths.<key>.authorization_params` | integration | object | MAY | extra authorize query params (AFPS) | none |
@@ -1317,7 +1321,7 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `auths.<key>.scope_catalog` | integration | object[] | MAY | `{ value, label, description?, implies? }` (AFPS authoritative) | none |
 | `auths.<key>.identity_claims` | integration | object | MAY | AFPS key → OIDC claim name | none |
 | `auths.<key>.required_identity_claims` | integration | string[] | MAY | required OIDC claims | none |
-| `auths.<key>.credentials.schema` | integration | object | MUST for api_key/basic/custom | self-contained JSON Schema 2020-12; local `$ref` only | none |
+| `auths.<key>.credentials.schema` | integration | object | MUST for api_key/basic/mtls/custom | self-contained JSON Schema 2020-12; local `$ref` only | none |
 | `auths.<key>.delivery` | integration | object | MUST | ≥1 of `http`, `env`, `files`; `http` exclusive of `env`/`files` | none |
 | `auths.<key>.delivery.http` | integration | object | MAY | `{ in, name, prefix?, value, encoding?, allow_server_override? }` | none |
 | `auths.<key>.delivery.http.in` | integration | string | MUST if `http` present | `header\|query\|cookie` (OpenAPI) | none |
@@ -1375,7 +1379,7 @@ Common consumer-side defaults observed in interoperable implementations include:
 
 | Field | Resolved default | Notes |
 | --- | --- | --- |
-| `auths.<key>.token_endpoint_auth_method` | `client_secret_post` | OAuth2 token request authentication |
+| `auths.<key>.token_endpoint_auth_method` | `client_secret_basic` | OAuth2 token request authentication; matches RFC 8414 §2 / RFC 7591 §2 default |
 | `auths.<key>.allow_all_uris` | `false` | resolved integration auth method |
 | `auths.<key>.delivery.files.<path>.mode` | `0400` | octal string |
 | `auths.<key>.connect.login.success_criteria` | HTTP 2xx | when omitted |

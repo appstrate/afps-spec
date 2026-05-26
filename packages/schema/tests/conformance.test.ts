@@ -836,8 +836,8 @@ describe("integration auth methods (§7.2 – §7.5)", () => {
     );
   });
 
-  test("api_key/basic/custom require credentials.schema", () => {
-    for (const type of ["api_key", "basic", "custom"]) {
+  test("api_key/basic/mtls/custom require credentials.schema", () => {
+    for (const type of ["api_key", "basic", "mtls", "custom"]) {
       // missing credentials → invalid
       const auth: Record<string, unknown> = {
         type,
