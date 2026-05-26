@@ -795,7 +795,7 @@
         "additionalProperties": {}
       }
     },
-    "tools": {
+    "tools_policy": {
       "type": "object",
       "propertyNames": {
         "type": "string"

@@ -28,7 +28,7 @@ Existing AI agent standards define **capabilities** — what an agent can do and
 An agent's `prompt.md` is the equivalent of what a user would type to give an agent its objective. Skills and MCP servers are the capabilities the agent draws on to reach that objective. Integrations are the authenticated service connections. AFPS packages all of this into a portable, versioned `.afps` artifact (a standard ZIP file).
 
 - **MCP** defines runtime tool invocation. AFPS does not define tool-calling transport; a runtime may choose to expose AFPS capabilities via MCP.
-- **MCPB** defines how a local MCP server is packaged. An AFPS `mcp-server` manifest *is* an MCPB manifest — a built `mcp-server` runs unmodified in any MCPB host (rename `.afps` to `.mcpb`).
+- **MCPB** defines how a local MCP server is packaged. An AFPS `mcp-server` manifest adopts the MCPB field vocabulary (`server`, `tools`, `user_config`, `manifest_version`) at the root alongside AFPS-native fields. Strict-MCPB host interoperability is not promised in 2.0; a publish-time projection is reserved for a future minor.
 - **Agent Skills** defines reusable capabilities (`SKILL.md`). AFPS skill packages are a strict superset: a valid Agent Skill directory becomes an AFPS skill when a `manifest.json` is added. The `SKILL.md` format, frontmatter fields, and optional directories (`scripts/`, `references/`, `assets/`) are preserved unchanged. AFPS adds identity, versioning, and dependency resolution.
 - **A2A** defines inter-agent communication. AFPS does not compete — A2A metadata can be added via the `_meta` extension mechanism.
 

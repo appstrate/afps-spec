@@ -125,21 +125,23 @@ See [spec.md, Section 3.3](./spec.md#33-skill-package) for details.
 
 An MCP server is a runnable tool server — executable code that an agent can invoke during agent execution, exposed over the Model Context Protocol. Where a skill provides instructions (declarative), an MCP server provides tools (executable).
 
-The key design decision: **an AFPS `mcp-server` manifest *is* a verbatim MCP Bundle (MCPB) manifest.** AFPS does not invent its own server-packaging format — it adopts MCPB wholesale. A built `mcp-server` package validates against the MCPB manifest schema and runs unmodified in any MCPB host: rename the `.afps` archive to `.mcpb` and it installs with no conversion step. AFPS-specific metadata travels under the MCPB `_meta` object.
+An AFPS `mcp-server` manifest is AFPS-native at the root (scoped `name`, `type`, `schema_version`, `dependencies`) and adopts the **MCP Bundle (MCPB) vocabulary** for the server run declaration, the advisory tool list, and the user-configuration mechanism (`server`, `tools`, `user_config`, plus `manifest_version` to tag which MCPB-vocab version is used). This lets producers reuse MCPB tooling and conventions when authoring the server payload. The manifest as published is **not** a strict MCPB bundle and SHOULD NOT be expected to install into Claude Desktop or other MCPB hosts without a publish-time projection (reserved for a future minor).
 
 ```text
-@acme/fetch-json.afps   (== a valid .mcpb bundle)
-├── manifest.json       # MCPB manifest + AFPS metadata under _meta
+@acme/fetch-json.afps
+├── manifest.json       # AFPS manifest + embedded MCPB-vocab fields
 └── server/             # Bundled server payload (entry_point)
 ```
 
-**`manifest.json`** (an MCPB manifest):
+**`manifest.json`**:
 
 ```json
 {
-  "manifest_version": "0.3",
-  "name": "fetch-json",
+  "name": "@acme/fetch-json",
   "version": "1.0.0",
+  "type": "mcp-server",
+  "schema_version": "2.0",
+  "manifest_version": "0.3",
   "display_name": "Fetch JSON",
   "description": "Fetch JSON from a URL and return the parsed response.",
   "server": {
@@ -152,14 +154,11 @@ The key design decision: **an AFPS `mcp-server` manifest *is* a verbatim MCP Bun
   },
   "tools": [
     { "name": "fetch_json", "description": "Fetch JSON from a URL." }
-  ],
-  "_meta": {
-    "dev.afps/mcp-server": { "name": "@acme/fetch-json", "type": "mcp-server" }
-  }
+  ]
 }
 ```
 
-The MCPB manifest declares how to run the server (`server.type`, `entry_point`, `mcp_config`); the `tools` array advertises the tools it exposes. The AFPS scoped package identity lives under `_meta["dev.afps/mcp-server"]`, which is what `dependencies.mcp_servers` and an integration's `source.server` reference resolve against.
+`server` declares how the server is launched (MCPB vocabulary); the `tools` array advertises the tools it exposes. The scoped `name` is the AFPS package identity that `dependencies.mcp_servers` and an integration's `source.server` reference resolve against.
 
 Because MCP servers contain executable code, they are the highest-risk package type.
 See [spec.md, Section 3.4](./spec.md#34-mcp-server-package) and
@@ -222,7 +221,7 @@ Every AFPS package has a stable AFPS identity of the form `@scope/name`. Both se
 acme/agent               invalid (missing @)
 ```
 
-For `agent`, `skill`, and `integration` packages this is the top-level `name`. For an `mcp-server`, whose top-level `name` follows MCPB's rules, the AFPS scoped identity lives under `_meta["dev.afps/mcp-server"].name`. Scopes let registries enforce ownership: only authorized publishers can release packages within a scope.
+This is the top-level `name` field for all four package types. Scopes let registries enforce ownership: only authorized publishers can release packages within a scope.
 See [spec.md, Section 2.2](./spec.md#22-package-identity).
 
 ### Semantic versioning
@@ -379,7 +378,7 @@ AFPS manifests are extensible. Unknown fields are preserved by consumers rather 
 }
 ```
 
-This adopts the Model Context Protocol `_meta` convention. It is also the only schema-blessed extension point for `mcp-server` packages, whose MCPB manifest schema forbids unknown top-level fields. (The `mcp`/`modelcontextprotocol` prefixes are reserved by MCP and must not be used.)
+This adopts the Model Context Protocol `_meta` convention. AFPS-defined fields live at the manifest root for all four package types; `_meta` is reserved for vendor extension data. (The `mcp`/`modelcontextprotocol` prefixes are reserved by MCP and must not be used.)
 
 See [spec.md, Section 10](./spec.md#10-extensibility).
 

@@ -80,9 +80,11 @@ const validSkill = {
 };
 
 const validMcpServer = {
-  manifest_version: "0.3",
-  name: "fetch-json",
+  name: "@example/fetch-json",
   version: "1.0.0",
+  type: "mcp-server",
+  schema_version: "2.0",
+  manifest_version: "0.3",
   display_name: "Fetch JSON",
   description: "Fetches JSON over HTTP.",
   author: { name: "AFPS Examples" },
@@ -92,9 +94,6 @@ const validMcpServer = {
     mcp_config: { command: "node", args: ["server/index.js"] },
   },
   tools: [{ name: "fetch", description: "Fetch a URL" }],
-  _meta: {
-    "dev.afps/mcp-server": { name: "@example/fetch-json", type: "mcp-server" },
-  },
 };
 
 const validIntegrationOauth2 = {
@@ -588,36 +587,20 @@ describe("mcp-server manifest (§3.4)", () => {
     });
   });
 
-  test('_meta["dev.afps/mcp-server"] contract is required and validated', () => {
-    // Missing _meta entirely.
-    const noMeta = { ...validMcpServer };
-    delete (noMeta as Record<string, unknown>)._meta;
-    expectInvalid(mcpServerManifestSchema, noMeta);
+  test("name MUST be a scoped name (§2.2)", () => {
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, name: "fetch-json" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, name: "@scope/Name" });
+  });
 
-    // Missing the dev.afps/mcp-server key.
-    expectInvalid(mcpServerManifestSchema, {
-      ...validMcpServer,
-      _meta: { "dev.appstrate/x": { a: 1 } },
-    });
-
-    // Non-scoped AFPS name.
-    expectInvalid(mcpServerManifestSchema, {
-      ...validMcpServer,
-      _meta: { "dev.afps/mcp-server": { name: "fetch-json", type: "mcp-server" } },
-    });
-
-    // Wrong type literal.
-    expectInvalid(mcpServerManifestSchema, {
-      ...validMcpServer,
-      _meta: { "dev.afps/mcp-server": { name: "@example/fetch-json", type: "tool" } },
-    });
+  test("type MUST be mcp-server", () => {
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, type: "tool" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, type: "agent" });
   });
 
   test("unknown _meta keys do not cause failure (§10)", () => {
     expectValid(mcpServerManifestSchema, {
       ...validMcpServer,
       _meta: {
-        "dev.afps/mcp-server": { name: "@example/fetch-json", type: "mcp-server" },
         "dev.appstrate/provenance": { source: "git" },
       },
     });
@@ -1062,7 +1045,7 @@ describe("integration tools/uris/setup_guide (§7.8 – §7.10)", () => {
           allow_all_uris: false,
         },
       },
-      tools: {
+      tools_policy: {
         list_issues: {
           required_scopes: ["repo"],
           required_auth_key: "oauth",

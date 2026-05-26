@@ -25,7 +25,6 @@ export {
   integrationConfiguration,
   // mcp-server (§3.4)
   mcpServerTypeEnum,
-  mcpServerAfpsMeta,
   // integration source (§7.1)
   integrationSource,
   transportEnum,

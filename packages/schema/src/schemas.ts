@@ -7,14 +7,12 @@
  * AFPS 2.0 uses a snake_case field vocabulary and defines four package types:
  *   - agent       (§3.2)
  *   - skill        (§3.3)
- *   - mcp-server   (§3.4) — the manifest IS an MCPB manifest; AFPS identity under _meta
+ *   - mcp-server   (§3.4) — AFPS-native at root, adopts MCPB vocabulary for server/tools/user_config
  *   - integration  (§3.5 + §7)
  *
  * These schemas define ONLY the fields in the AFPS specification. Vendor
- * extension data lives under `_meta` (§10). For agent/skill/integration the
- * top-level objects are permissive (looseObject) so unknown fields round-trip;
- * the MCPB manifest schema is authoritative for mcp-server top-level fields, so
- * only the AFPS `_meta` contract is validated there.
+ * extension data lives under `_meta` (§10). All top-level objects are
+ * permissive (looseObject) so unknown fields round-trip.
  *
  * Schemas are parameterized by major version: the `schema_version` field is
  * constrained to match (e.g., v2 schemas accept "2.0", "2.1", …).
@@ -190,13 +188,13 @@ export const integrationConfiguration = z.looseObject({
 });
 
 // ─────────────────────────────────────────────
-// MCP-server: MCPB shapes (§3.4)
+// MCP-server: MCPB-vocabulary shapes (§3.4)
 // ─────────────────────────────────────────────
 
-/** MCPB server runtime type. `uv` requires MCPB manifest_version 0.4 (§3.4). */
+/** Server runtime type. `uv` requires manifest_version 0.4 (§3.4). */
 export const mcpServerTypeEnum = z.enum(["node", "python", "binary", "uv"]);
 
-/** MCPB `server.mcp_config` — permissive; MCPB schema is authoritative. */
+/** `server.mcp_config` (MCPB vocabulary). */
 const mcpConfig = z.looseObject({
   command: z.string().min(1),
   args: z.array(z.string()).optional(),
@@ -214,17 +212,6 @@ const mcpServerToolEntry = z.looseObject({
   name: z.string().min(1),
   description: z.string().optional(),
 });
-
-/**
- * The AFPS contract carried under `_meta["dev.afps/mcp-server"]` (§3.4).
- * It MUST carry the scoped AFPS package identity and `type: "mcp-server"`.
- */
-export const mcpServerAfpsMeta = z.looseObject({
-  name: scopedName,
-  type: z.literal("mcp-server"),
-});
-
-const MCP_SERVER_META_KEY = "dev.afps/mcp-server";
 
 // ─────────────────────────────────────────────
 // Integration: source (§7.1)
@@ -635,43 +622,18 @@ export function createSchemas(majorVersion: number) {
     type: z.literal("skill"),
   });
 
-  // ── MCP-server (§3.4) — the manifest IS an MCPB manifest. ──
-  // Top-level MCPB fields are permissive (MCPB schema is authoritative); the
-  // AFPS identity contract under _meta["dev.afps/mcp-server"] is validated.
+  // ── MCP-server (§3.4) — AFPS-native at root + embedded MCPB vocabulary. ──
   const mcpServerManifestSchema = z
     .looseObject({
+      ...commonFields,
+      type: z.literal("mcp-server"),
       manifest_version: z.string().min(1),
-      name: z.string().min(1),
-      version: semverVersion,
-      display_name: z.string().optional(),
-      description: z.string().optional(),
-      author: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
       server: mcpServerRun,
       tools: z.array(mcpServerToolEntry).optional(),
       user_config: z.record(z.string(), z.unknown()).optional(),
-      _meta: metaSchema,
     })
     .superRefine((val, ctx) => {
-      const afps = val._meta?.[MCP_SERVER_META_KEY];
-      if (afps === undefined) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["_meta", MCP_SERVER_META_KEY],
-          message: `mcp-server manifest MUST carry _meta["${MCP_SERVER_META_KEY}"] with a scoped name and type: "mcp-server"`,
-        });
-        return;
-      }
-      const parsed = mcpServerAfpsMeta.safeParse(afps);
-      if (!parsed.success) {
-        for (const issue of parsed.error.issues) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["_meta", MCP_SERVER_META_KEY, ...issue.path],
-            message: issue.message,
-          });
-        }
-      }
-      // uv server type requires MCPB manifest_version 0.4 (§3.4).
+      // uv server type requires manifest_version 0.4 (§3.4).
       if (val.server?.type === "uv" && val.manifest_version === "0.3") {
         ctx.addIssue({
           code: "custom",
@@ -688,14 +650,15 @@ export function createSchemas(majorVersion: number) {
       type: z.literal("integration"),
       source: integrationSource,
       auths: z.record(z.string().regex(AUTH_KEY_REGEX), authMethod),
-      // `tools` is a SPARSE POLICY TABLE keyed by tool name — it carries
-      // `required_scopes` / `required_auth_key` / `url_patterns` per tool
-      // that needs them. It is NOT the catalog of "tools this integration
-      // exposes": the catalog comes from the referenced mcp-server's
-      // MCPB-canonical `tools[]` (local source) or the integration's
-      // declared tools (remote/api sources). An author opts a tool OUT of
-      // the agent-facing surface via `hidden_tools` below.
-      tools: z.record(z.string(), integrationToolMeta).optional(),
+      // `tools_policy` is a SPARSE POLICY TABLE keyed by tool name — it
+      // carries `required_scopes` / `required_auth_key` / `url_patterns`
+      // per tool that needs them. It is NOT the catalog of "tools this
+      // integration exposes": the catalog comes from the referenced
+      // mcp-server's `tools[]` (local source) or the integration's
+      // declared tools (remote/api sources). The `_policy` suffix
+      // disambiguates this field from `mcp-server.tools`. An author opts
+      // a tool OUT of the agent-facing surface via `hidden_tools` below.
+      tools_policy: z.record(z.string(), integrationToolMeta).optional(),
       // Explicit opt-out: tool names that exist in the resolved catalog
       // but should never reach the agent's picker / `tools/list`. Tools
       // referenced as a `connect.tool` (run-start primitives) are auto-

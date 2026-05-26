@@ -1,5 +1,78 @@
 # Changelog
 
+## v2.0.2 — 2026-05-26
+
+**Breaking refactor of the `mcp-server` package type + rename of integration
+per-tool policy field.** AFPS 2.0 is still flagged Draft in `spec.md`; this
+revision lands while the draft window is open. Producers that emitted
+`mcp-server` or integration manifests under v2.0.0/v2.0.1 must migrate.
+
+### Specification
+
+- **§2.2 / §3.1 / §3.4**: an `mcp-server` manifest is now AFPS-native at the
+  root. Top-level fields are the same as for `agent`/`skill`/`integration`:
+  scoped `name`, `type: "mcp-server"`, `schema_version`, common metadata,
+  optional `dependencies`. The `manifest_version`, `server`, `tools`, and
+  `user_config` fields continue to adopt the MCPB vocabulary verbatim.
+- **§3.4**: dropped the “rename `.afps` → `.mcpb` runs in any MCPB host”
+  invariant. AFPS no longer claims strict-MCPB interoperability; a
+  publish-time projection to a strict MCPB bundle is reserved for a future
+  minor (§10.2).
+- **§4.1**: `dependencies` is a top-level field for all four package types
+  (the previous `_meta["dev.afps/mcp-server"].dependencies` placement is
+  removed).
+- **§2.4**: `schema_version` applies to `mcp-server` (was previously declared
+  not applicable).
+- **Appendix A**: cleaned of all `mcp-server` special-case annotations on
+  `name`, `type`, `author`, `repository`, `compatibility`, `dependencies`,
+  `schema_version`.
+- **§7.8 / Appendix A**: `integration.tools` renamed to
+  `integration.tools_policy` to disambiguate from `mcp-server.tools`
+  (the two had the same field name but distinct shapes — a sparse policy
+  table vs an advisory catalog). All sub-fields (`required_scopes`,
+  `required_auth_key`, `url_patterns`) and semantics are unchanged.
+
+### Schema (`@afps-spec/schema@2.0.2`)
+
+- `mcpServerManifestSchema` rewritten on top of the shared `commonFields`
+  shape; no longer enforces `_meta["dev.afps/mcp-server"]`.
+- `mcpServerAfpsMeta` export removed (no replacement; AFPS identity is now the
+  top-level `name`).
+- Conformance tests updated for the new shape; legacy MCPB-style fixtures
+  removed.
+
+### Migration
+
+A v2.0.0 / v2.0.1 `mcp-server` manifest of the form
+
+```json
+{
+  "manifest_version": "0.3",
+  "name": "fetch-json",
+  "version": "1.0.0",
+  "server": { ... },
+  "_meta": { "dev.afps/mcp-server": { "name": "@example/fetch-json", "type": "mcp-server" } }
+}
+```
+
+migrates to
+
+```json
+{
+  "name": "@example/fetch-json",
+  "version": "1.0.0",
+  "type": "mcp-server",
+  "schema_version": "2.0",
+  "manifest_version": "0.3",
+  "server": { ... }
+}
+```
+
+(scoped `name` lifted from `_meta` to the root; `type` and `schema_version`
+added; the `_meta` AFPS-identity block deleted).
+
+---
+
 ## v2.0.1 — 2026-05-26
 
 Post-release clarifications and corrections from the SOTA alignment audit

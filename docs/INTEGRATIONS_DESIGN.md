@@ -26,22 +26,22 @@ implementation/migration plan.
 
 | # | Decision | Rationale / source |
 |---|----------|--------------------|
-| D1 | **`mcp-server` is a new package type whose manifest format IS MCPB verbatim.** | MCPB describes exactly one thing — how to run a local MCP server. AFPS adopts it wholesale (does not reinvent). Renaming `pkg.afps`→`pkg.mcpb` runs it in Claude Desktop. [MCPB MANIFEST.md / mcpb repo] |
+| D1 | **`mcp-server` is a new package type whose manifest is AFPS-native at the root and adopts the MCPB field vocabulary for the server / tools / user_config block.** | MCPB describes how to run a local MCP server; AFPS reuses that vocabulary verbatim so producers can author the server payload with MCPB tooling. AFPS does NOT promise strict-MCPB compatibility (no `rename .afps→.mcpb` invariant); a publish-time projection to a strict MCPB bundle is reserved for a future minor. [MCPB MANIFEST.md / mcpb repo] |
 | D2 | **`integration` is the credentialed binding to a service** (service-centric), referencing a capability *source*. | A service (Gmail, Stripe) is the identity; the MCP server is one way to reach it. Auth is bound to the service. |
-| D3 | **The envelope follows the source.** `source=local` → the manifest IS MCPB. `source=remote` / `source=api` → AFPS-native. | MCPB only covers the local case; forcing it as a universal envelope distorts remote/api. "Rename & run" is a *property of the local cell*, not a global goal. |
-| D4 | **All AFPS-specific data in an `mcp-server` manifest lives under `_meta`** (reverse-DNS namespaced). | MCPB's JSON schema sets `additionalProperties:false` on every object incl. top level (verified in `schemas/mcpb-manifest-v0.4.schema.json` + `strictObject` in `src/schemas/0.3.ts`). A stock validator **rejects** any extra top-level field. `_meta` is the only schema-blessed extension point. |
+| D3 | **All four package types share the same AFPS-native envelope** (top-level `name` scoped, `type`, `schema_version`, common metadata, optional `dependencies`). | Symmetric mental model across types; eliminates the special-case asymmetry where `mcp-server` had to host AFPS-native data under `_meta` to remain strict-MCPB-valid. The MCPB compatibility goal is dropped in favor of vocabulary alignment. |
+| D4 | **The `_meta` mechanism remains the canonical extension point for all types (vendor namespaces, future standard fields).** AFPS-defined fields live at the manifest root for every type, including `mcp-server`. | `_meta` keeps its role for non-AFPS vendor data; AFPS itself no longer needs to confine its fields there because no upstream schema constrains the root any more. |
 | D5 | **OAuth declaration adopts RFC 8414 / OIDC Discovery vocabulary, discovery-first.** | Exactly the standards the MCP authorization spec committed to (MCP 2025-11-25: AS MUST provide RFC 8414 or OIDC Discovery; `resource` per RFC 8707; PKCE via `code_challenge_methods_supported`). Aligns AFPS with the ecosystem it sits on. |
 | D6 | **`connect.login` (non-OAuth acquisition) aligns with OpenAPI Arazzo** (`success_criteria`, `outputs`, runtime expressions); jwt/regex-capture/cookie extractors + credential materialization are AFPS extensions. | Arazzo is the OAI workflows spec; it models request→assert→extract→reuse. [Arazzo 1.0.1 §4.6–4.7] |
 | D7 | **`delivery` adopts OpenAPI `in`+`name` (header location) + Kubernetes secret-injection vocabulary (env/files).** | OpenAPI Security Scheme `in`/`name` is the recognized credential-location vocab; K8s `secretKeyRef`/`mountPath`/`mode` is the recognized injection vocab. Both fall short of full delivery, so the value-template + env/file unification are AFPS's irreducible contribution. |
 | D8 | **AFPS house casing is `snake_case`.** Where AFPS aligns with a camelCase source (Arazzo `successCriteria`, K8s `mountPath`), the AFPS field is the snake_case rendering, with a mapping note. | Consistency with the MCPB envelope (snake_case) and verbatim alignment with RFC 8414/OIDC/9728 fields (which are snake_case and the "copy from the discovery doc" property must be preserved). |
 | D9 | **An `integration` references its `mcp-server` by native AFPS `{name, version-range}`** (same convention as skills/tools/providers). purl is **not** the reference mechanism — it is demoted to optional build-provenance under `_meta` (recording a foreign npm/oci package vendored into an `mcp-server` at publish time). | MCPB bundles its dependencies into the `.mcpb` ZIP (no registry refs), so a foreign MCP server is *vendored* into an AFPS `mcp-server` at build time and then referenced natively. Native `@scope/name`+range is consistent with AFPS's existing dependency model; purl (ECMA-427) only records provenance where useful. |
 | D10 | **`tool` and `provider` package types are DEPRECATED, superseded by `mcp-server` and `integration`.** | Producers SHOULD NOT emit them; consumers MUST keep accepting them through AFPS 1.x; MAY remove in 2.0. |
-| D11 | **AFPS common fields adopt MCPB vocabulary verbatim** (`author`/`repository` objects, `homepage`, `documentation`, `support`, `icon`/`icons`, `screenshots`, `privacy_policies`, `long_description`, `compatibility`). String forms of `author`/`repository` remain accepted for 1.x compatibility. | A single editor publishes one identity block across the four types instead of four divergent ones; aligns AFPS with the MCPB envelope already validating mcp-server. |
+| D11 | **AFPS common fields adopt the MCPB / npm vocabulary** (`author`/`repository` objects, `homepage`, `documentation`, `support`, `icon`/`icons`, `screenshots`, `privacy_policies`, `long_description`, `compatibility`). String forms of `author`/`repository` are accepted everywhere. | A single editor publishes one identity block across the four types instead of four divergent ones. No strict-MCPB constraints apply now that the envelope is AFPS-native. |
 | D12 | **`upload_protocols` is an open string array, not a closed enum.** Reserved values for interop are listed in §7.1; custom protocols SHOULD use a reverse-DNS qualifier. | Closed enums in a normative spec block community-driven protocol additions and force minor bumps for adoption. |
 | D13 | **`connect.login.outputs` accepts Arazzo 1.1 Selector Objects** in addition to runtime-expression strings and AFPS extractors (`cookie`/`jwt`/`regex`). | Arazzo 1.1 published a uniform Selector Object (`{context, selector, type}`) that subsumes the AFPS regex/jsonpath/jsonpointer cases. Keep AFPS extractors only for cases Arazzo cannot express. |
 | D14 | **Per-integration configuration (scopes / auth selection) moves inline into `dependencies.integrations.<id>` object form.** The sibling `integrations_configuration` map is deprecated and kept only for backward compatibility. | One concept, one place. Aligns AFPS with `prefers-generic-over-special-casing`: dependency values become polymorphic `string | { version, ... }` rather than two sibling maps that must agree. |
 | D15 | **`callback_url_hint` is auth-method-scoped.** Declared at `auths.<key>.callback_url_hint`. The top-level `setup_guide.callback_url_hint` is deprecated. | OAuth-only concept; an integration with no OAuth auth method has no callback to hint at. |
-| D16 | **`integration.tools.<name>` is a sparse policy table augmenting the canonical tool catalog of the referenced source** (MCPB `tools[]` for local, MCP introspection for remote). `integration.hidden_tools` opts tools OUT of the agent surface. | Removes the ambiguity of whether `integration.tools` is a catalog or a policy table. Consumers can validate at publish that policy keys resolve in the canonical catalog. |
+| D16 | **`integration.tools_policy.<name>` is a sparse policy table augmenting the canonical tool catalog of the referenced source** (`mcp-server.tools[]` for local, MCP introspection for remote). `integration.hidden_tools` opts tools OUT of the agent surface. The `_policy` suffix disambiguates from `mcp-server.tools` (canonical catalog). | Removes the ambiguity of whether `integration.tools` is a catalog or a policy table. Consumers can validate at publish that policy keys resolve in the canonical catalog. |
 | D17 | **`delivery.env.<var>` carries an explicit `user_config_key`** binding to the referenced mcp-server's MCPB `user_config`. Defaults to the env-variable name when omitted. | The mapping `delivery.env` → `user_config` was implicit; making it explicit lets build steps emit the correct MCPB user_config entries deterministically. |
 
 ---
@@ -136,25 +136,29 @@ validates against the MCPB JSON schema for the declared `manifest_version`.
   is the only credential mechanism Claude Desktop understands.
 
 ### 5.2 AFPS enrichment
-Any AFPS-specific data MUST live under `_meta` (value = object) — never as extra
-top-level fields (D4). Portable AFPS metadata → `_meta["dev.afps/mcp-server"]`;
-Appstrate-only hints (bundler provenance, source-resolution) →
-`_meta["dev.appstrate/…"]`.
+AFPS-native fields (scoped `name`, `type`, `schema_version`, `dependencies`,
+common identity/metadata fields) live at the **root** of the `mcp-server`
+manifest alongside the MCPB-vocabulary fields. `_meta` keeps its standard role
+for vendor extensions (e.g. `_meta["dev.appstrate/…"]` for bundler provenance);
+AFPS-defined data no longer needs to be confined under `_meta` because the
+manifest is no longer constrained by the MCPB strict schema.
 
 ### 5.3 Packaging
-`.mcpb`/`.afps` is a ZIP with `manifest.json` at the archive root + the server
-payload referenced by `server.entry_point`. Optional detached PKCS#7 signature
-(MCPB `sign`) appended after the ZIP EOCD; a signed bundle remains a valid ZIP.
-`icon`, if present, MUST be a relative path to a real PNG.
+An `.afps` archive is a ZIP with `manifest.json` at the archive root + the
+server payload referenced by `server.entry_point`. `icon`, if present, MUST be
+a relative path to a real PNG.
 
-### 5.4 An `mcp-server` is always runnable
-Because an `mcp-server` IS an MCPB manifest by construction, it is **always**
-MCPB-valid and runnable: rename `.afps`→`.mcpb`, Claude Desktop launches it, the
-user supplies any secret via `user_config`. There is no "valid but not runnable"
-`mcp-server`. The only real boundary is **which capability *sources* can be an
-`mcp-server` at all**: `local` node/python/binary/uv → yes; `remote`/`docker`/`bun`
-→ no — those are `integration` `source` kinds with no MCPB form (§6.2), not a
-runnability gradient.
+### 5.4 Relationship to strict MCPB
+A built `mcp-server` is **not** a strict MCPB bundle by construction: the
+manifest carries AFPS-native top-level fields outside the MCPB schema. The MCPB
+vocabulary alignment lets producers reuse MCPB tooling and conventions when
+authoring the server payload, but installation into a stock MCPB host (Claude
+Desktop, mcpb CLI) is not promised. A publish-time projection to a strict MCPB
+bundle MAY be added in a future minor of the AFPS spec; producers needing
+strict-MCPB interop today MUST emit it separately. Capability surfaces other
+than a local `node`/`python`/`binary`/`uv` server (remote, docker, hosted MCP
+endpoints, …) are modeled as an `integration` `source` (§6.2), not as an
+`mcp-server`.
 
 > **Where OAuth/MITM live (and the zero-knowledge note):** OAuth, `connect.*`
 > acquisition, and `delivery.http`/MITM are properties of the **`integration`**, not
@@ -316,9 +320,9 @@ Runtime-expression grammar adopted from Arazzo: `$statusCode`, `$response.body[#
 AFPS extractor objects (`from: jwt|regex|cookie`) extend `outputs` for cases Arazzo
 cannot express.
 
-### 6.6 `tools.<name>` — per-tool metadata (local/remote sources)
+### 6.6 `tools_policy.<name>` — per-tool policy (local/remote sources)
 ```jsonc
-"tools": {
+"tools_policy": {
   "list_issues": {
     "required_scopes": ["repo"],
     "required_auth_key": "oauth",                 // disambiguates multi-auth
@@ -327,7 +331,9 @@ cannot express.
 }
 ```
 `required_scopes` drives the agent-install scope union; `url_patterns` is
-defence-in-depth (glob `*`/`**`, optional methods).
+defence-in-depth (glob `*`/`**`, optional methods). The `_policy` suffix
+distinguishes this field from `mcp-server.tools` (which is a canonical
+catalog, not a policy table).
 
 ---
 
@@ -366,11 +372,10 @@ defence-in-depth (glob `*`/`**`, optional methods).
 
 ## 9. Implementation plan (Appstrate side)
 
-**Phase 0 — Conformance harness first.** Embed the MCPB JSON schema; add tests:
-(a) a built `mcp-server` validates against MCPB; (b) a renamed `.mcpb` installs+runs
-in a real MCPB host for a `node` + `python` server. Wire into
-`@appstrate/afps-runtime` conformance. Exit: harness exists and fails on today's
-manifests.
+**Phase 0 — Conformance harness first.** Add Zod-driven tests covering the four
+package types (agent / skill / mcp-server / integration). Wire into
+`@appstrate/afps-runtime` conformance. Exit: harness exists and validates the
+example manifests in `examples/`.
 
 **Phase 1 — Schema design freeze.** Lock the field-level schemas in §5–§6 as Zod +
 JSON-Schema-mirror drafts; finalize `_meta` namespace strings; write example
