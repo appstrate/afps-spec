@@ -587,6 +587,26 @@ describe("mcp-server manifest (§3.4)", () => {
     });
   });
 
+  test("manifest_version enforces MAJOR.MINOR format (§3.4 + Appendix A)", () => {
+    // Recommended values accept
+    expectValid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "0.3" });
+    expectValid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      manifest_version: "0.4",
+      server: { ...validMcpServer.server, type: "uv" },
+    });
+    // Forward-compat: future MCPB versions still accepted (no hard enum)
+    expectValid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "1.0" });
+    expectValid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "12.34" });
+
+    // Format rejections
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "abc" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "0.3.1" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "1" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, manifest_version: "v0.3" });
+  });
+
   test("name MUST be a scoped name (§2.2)", () => {
     expectInvalid(mcpServerManifestSchema, { ...validMcpServer, name: "fetch-json" });
     expectInvalid(mcpServerManifestSchema, { ...validMcpServer, name: "@scope/Name" });
@@ -1027,6 +1047,70 @@ describe("connect (§7.7)", () => {
         },
       },
     });
+  });
+
+  // §7.7 — AFPS-extractor variants are a discriminated union over `from`.
+  const withOutput = (output: unknown) => ({
+    ...base,
+    auths: {
+      c: {
+        type: "custom",
+        credentials: { schema: credsSchema },
+        connect: {
+          login: {
+            request: { method: "POST", url: "https://api.e.com/login" },
+            outputs: { x: output },
+          },
+        },
+        delivery: { env: { TOKEN: { value: "{$outputs.x}", sensitive: true } } },
+      },
+    },
+  });
+
+  test("connect.login.outputs accepts cookie extractor with name", () => {
+    expectValid(integrationManifestSchema, withOutput({ from: "cookie", name: "XSRF-TOKEN" }));
+  });
+
+  test("connect.login.outputs accepts jwt extractor with token + path", () => {
+    expectValid(
+      integrationManifestSchema,
+      withOutput({ from: "jwt", token: "{$outputs.access}", path: "/sub" }),
+    );
+  });
+
+  test("connect.login.outputs accepts regex extractor with source + pattern (+ optional group)", () => {
+    expectValid(
+      integrationManifestSchema,
+      withOutput({ from: "regex", source: "{$response.body}", pattern: "token=([a-z]+)" }),
+    );
+    expectValid(
+      integrationManifestSchema,
+      withOutput({
+        from: "regex",
+        source: "{$response.body}",
+        pattern: "token=([a-z]+)",
+        group: 1,
+      }),
+    );
+  });
+
+  test("connect.login.outputs rejects unknown `from` value", () => {
+    expectInvalid(integrationManifestSchema, withOutput({ from: "header", name: "X-Token" }));
+    expectInvalid(integrationManifestSchema, withOutput({ from: "anything" }));
+  });
+
+  test("connect.login.outputs rejects cookie extractor missing `name`", () => {
+    expectInvalid(integrationManifestSchema, withOutput({ from: "cookie" }));
+  });
+
+  test("connect.login.outputs rejects jwt extractor missing `token` or `path`", () => {
+    expectInvalid(integrationManifestSchema, withOutput({ from: "jwt", path: "/sub" }));
+    expectInvalid(integrationManifestSchema, withOutput({ from: "jwt", token: "{$outputs.t}" }));
+  });
+
+  test("connect.login.outputs rejects regex extractor missing `source` or `pattern`", () => {
+    expectInvalid(integrationManifestSchema, withOutput({ from: "regex", pattern: "x" }));
+    expectInvalid(integrationManifestSchema, withOutput({ from: "regex", source: "x" }));
   });
 });
 

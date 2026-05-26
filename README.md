@@ -88,8 +88,7 @@ The agent's manifest lists these in a single `dependencies` field with semver ra
 - [examples/](./examples/) — minimal and full package examples (agent, skill, mcp-server, integration)
 - [packages/](./packages/) — reference TS artefacts published to npm under `@afps-spec/*`
   - [packages/schema/](./packages/schema/) — JSON Schema + Zod (see [README](./packages/schema/README.md))
-  - [packages/types/](./packages/types/) — TS bindings for the protocol
-  - [packages/platform-tools/](./packages/platform-tools/) — reference impl of the 5 reserved tools
+  - [packages/types/](./packages/types/) — TS bindings for AFPS 2.0 contracts
 - [GOVERNANCE.md](./GOVERNANCE.md) — change process and stewardship
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — how to contribute
 - [CHANGELOG.md](./CHANGELOG.md) — specification history
@@ -100,9 +99,10 @@ AFPS defines:
 
 - Package identity with scoped names and semantic versions
 - Manifest fields for `agent`, `skill`, `mcp-server`, and `integration`
-- Dependencies and integration configuration
+- A dependency model with semver ranges and per-dependency configuration (e.g. requested OAuth scopes)
 - A JSON Schema 2020-12 based schema system for input, output, and config
 - ZIP package structure for distribution
+- Integration authentication metadata: OAuth 2.0 / OIDC discovery, credential schema, credential delivery (`http` / `env` / `files`), declarative credential acquisition (`connect`), per-tool policy, URI restrictions, and setup-guide hints
 
 AFPS does not define:
 

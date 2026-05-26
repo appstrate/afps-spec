@@ -952,7 +952,8 @@ For auth methods of `type` `api_key`, `basic`, `mtls`, or `custom`, `credentials
     "value": "{$credential.access_token}",
     "allow_server_override": false
   },
-  // HTTP Basic vendor pattern: base64 over the rendered prefix+value.
+  // HTTP Basic vendor pattern (RFC 7617): base64 over the rendered `value` only;
+  // the `Basic ` prefix is concatenated AFTER encoding (the scheme prefix is not base64'd).
   // "http": { "in": "header", "name": "Authorization", "prefix": "Basic ",
   //           "value": "{$credential.email}/token:{$credential.api_key}",
   //           "encoding": "base64" },
@@ -971,7 +972,7 @@ For auth methods of `type` `api_key`, `basic`, `mtls`, or `custom`, `credentials
 }
 ```
 
-- **`http`** — credential injection into an HTTP request. `in` (`header`, `query`, `cookie`) and `name` adopt the OpenAPI Security Scheme location vocabulary; `prefix` and `value` are AFPS additions (OpenAPI has no value template). The combination `http` + `Authorization` + `"Bearer "` maps to the `Authorization: Bearer` convention. `encoding` is OPTIONAL and, when present, MUST be `base64` ([RFC 4648] §4), applied to the rendered `prefix`+`value` string before placement — expressing HTTP Basic vendor patterns (for example `value: "{$credential.email}/token:{$credential.api_key}"`, `prefix: "Basic "`, `encoding: "base64"`). Consumers MUST reject an unknown `encoding`. `allow_server_override` (boolean, default `false`) governs whether the source server may override the injected value. HTTP delivery is a man-in-the-middle/proxy injection in which the source server never sees the secret.
+- **`http`** — credential injection into an HTTP request. `in` (`header`, `query`, `cookie`) and `name` adopt the OpenAPI Security Scheme location vocabulary; `prefix` and `value` are AFPS additions (OpenAPI has no value template). The combination `http` + `Authorization` + `"Bearer "` maps to the `Authorization: Bearer` convention. `encoding` is OPTIONAL and, when present, MUST be `base64` ([RFC 4648] §4), applied to the rendered `value` string (NOT to `prefix`), with the encoded result then concatenated after `prefix` — expressing HTTP Basic vendor patterns per [RFC 7617] (for example `value: "{$credential.email}/token:{$credential.api_key}"`, `prefix: "Basic "`, `encoding: "base64"` produces `Authorization: Basic <base64(email/token:api_key)>`, leaving the `Basic ` scheme prefix unencoded). Consumers MUST reject an unknown `encoding`. `allow_server_override` (boolean, default `false`) governs whether the source server may override the injected value. HTTP delivery is a man-in-the-middle/proxy injection in which the source server never sees the secret.
 - **`env`** — injection as one or more environment variables. Each entry has a `value` template, an OPTIONAL `sensitive` boolean, and an OPTIONAL `user_config_key` string. `env` delivery maps onto MCPB `user_config` → `${user_config.KEY}` (§3.4): the source server holds the secret. `user_config_key` names the MCPB `user_config` key that an AFPS build step MUST inject into the referenced `mcp-server` so the rendered `value` reaches the server through `${user_config.<user_config_key>}` in `mcp_config.env`. When `user_config_key` is omitted, consumers SHOULD default to the env-variable name itself (the map key). This is the delivery mode that lets a `local`-source integration's referenced `mcp-server` also run standalone in an MCPB host.
 - **`files`** — injection as one or more files. Each entry has a `value` template and an OPTIONAL `mode` (an octal string such as `"0400"`; default `"0400"`).
 

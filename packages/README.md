@@ -5,12 +5,12 @@ npm under the `@afps-spec` scope. Only spec-level contracts live here.
 
 | Package                                  | Scope                                                                 |
 | ---------------------------------------- | --------------------------------------------------------------------- |
-| [`schema`](./schema)                     | Zod + JSON Schema definitions for AFPS manifests                      |
-| [`types`](./types)                       | TS bindings for the AFPS 1.3+ protocol (Tool, RunEvent, refs)         |
+| [`schema`](./schema)                     | Zod + JSON Schema definitions for AFPS 2.0 manifests                  |
+| [`types`](./types)                       | TS bindings for AFPS 2.0 contracts (Tool, RunEvent, refs)             |
 
 Both publish to npm as `@afps-spec/<package>@<version>`. Release is
-tag-driven: `afps-<package>@<version>` (e.g. `afps-types@1.0.0`,
-`afps-schema@1.3.2`) triggers the shared
+tag-driven: `afps-<package>@<version>` (e.g. `afps-types@2.0.0`,
+`afps-schema@2.0.3`) triggers the shared
 [publish workflow](../.github/workflows/publish-package.yml).
 
 **Scope boundary.** AFPS §6.1 leaves state persistence, prompt

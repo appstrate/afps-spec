@@ -1,5 +1,51 @@
 # Changelog
 
+## v2.0.4 — 2026-05-26
+
+**Schema tightenings + §7.6 editorial correction.** No spec breaking changes:
+both schema tightenings reject shapes the spec text already forbids; the §7.6
+edit aligns the prose with the worked example (and with RFC 7617).
+
+### Schema (`@afps-spec/schema@2.0.4`)
+
+- **`connect.login.outputs` AFPS-extractor variant** (§7.7) — the loose
+  `{ from: <any-string> }` shape is replaced by a discriminated union over
+  `from ∈ "cookie" | "jwt" | "regex"`, each variant requiring its
+  spec-mandated fields (`cookie`: `name`; `jwt`: `token`, `path`; `regex`:
+  `source`, `pattern`, optional non-negative integer `group`). Producers can
+  no longer smuggle non-spec extractor shapes through the schema.
+- **`mcp-server.manifest_version`** (§3.4 + Appendix A) — format constraint
+  `^\d+\.\d+$` is now enforced. The recommended values `0.3` (baseline) /
+  `0.4` (required when `server.type === "uv"`) remain a soft recommendation
+  (the `uv` ⇒ `0.4` cross-field rule continues to be enforced by
+  `superRefine`); the hard format check rejects shapes like `"1"`,
+  `"0.3.1"`, `"abc"`, and the empty string.
+- Regenerated `v2/integration.schema.json` and `v2/mcp-server.schema.json`
+  from the updated Zod source.
+- Conformance tests added for each variant of the discriminated extractor
+  and for the `manifest_version` regex (`0.3`, `0.4`, `1.0` accepted;
+  `"1"`, `"abc"`, `""`, `"0.3.1"` rejected).
+
+### Specification
+
+- **§7.6 (editorial)** — clarified that `encoding: "base64"` is applied to
+  the rendered `value` only (NOT to `prefix+value`), with the encoded result
+  concatenated after `prefix`. This matches the worked HTTP Basic example
+  per RFC 7617 and resolves the internal contradiction between the prose
+  and the example. No normative behaviour change for implementations that
+  already followed the example.
+
+### Documentation
+
+- `README.md` — removed dead link to non-existent `packages/platform-tools/`;
+  added §7 integration-authentication metadata to the Scope bullets so the
+  v2.0 auth model (OAuth2/OIDC discovery, credential delivery, `connect`,
+  per-tool policy, URI restrictions, setup-guide) is surfaced on the
+  landing page.
+- `packages/README.md` — refreshed stale "AFPS 1.3+ protocol" wording to
+  "AFPS 2.0 contracts" and bumped release-tag examples to current versions
+  (`afps-types@2.0.0`, `afps-schema@2.0.3`).
+
 ## v2.0.2 — 2026-05-26
 
 **Breaking refactor of the `mcp-server` package type + rename of integration

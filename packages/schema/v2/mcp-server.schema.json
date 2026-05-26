@@ -291,7 +291,7 @@
     },
     "manifest_version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^\\d+\\.\\d+$"
     },
     "server": {
       "type": "object",

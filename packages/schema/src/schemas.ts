@@ -364,7 +364,34 @@ const arazzoSelector = z.looseObject({
   type: z.enum(["jsonpath", "xpath", "jsonpointer"]),
 });
 
-const afpsExtractor = z.looseObject({ from: z.string().min(1) });
+/**
+ * AFPS extractor variants (§7.7). Each variant requires the spec-mandated
+ * fields. `from` MUST be one of `cookie | jwt | regex`; unknown values are
+ * rejected so producers cannot smuggle non-spec extractor shapes.
+ */
+const afpsExtractorCookie = z.looseObject({
+  from: z.literal("cookie"),
+  name: z.string().min(1),
+});
+
+const afpsExtractorJwt = z.looseObject({
+  from: z.literal("jwt"),
+  token: z.string().min(1),
+  path: z.string().min(1),
+});
+
+const afpsExtractorRegex = z.looseObject({
+  from: z.literal("regex"),
+  source: z.string().min(1),
+  pattern: z.string().min(1),
+  group: z.number().int().nonnegative().optional(),
+});
+
+const afpsExtractor = z.discriminatedUnion("from", [
+  afpsExtractorCookie,
+  afpsExtractorJwt,
+  afpsExtractorRegex,
+]);
 
 const connectOutput = z.union([z.string().min(1), arazzoSelector, afpsExtractor]);
 
@@ -627,7 +654,14 @@ export function createSchemas(majorVersion: number) {
     .looseObject({
       ...commonFields,
       type: z.literal("mcp-server"),
-      manifest_version: z.string().min(1),
+      // §3.4 + Appendix A: `manifest_version` follows MCPB `MAJOR.MINOR` format.
+      // The format is enforced; the recommended enum (`0.3` baseline, `0.4`
+      // when server.type === "uv") is NOT enforced as a hard constraint so
+      // future MCPB minor revisions are forward-compatible. The
+      // `uv` ⇒ `0.4` cross-field rule is enforced in the `superRefine` below.
+      manifest_version: z.string().regex(/^\d+\.\d+$/, {
+        error: "manifest_version must follow MAJOR.MINOR format (e.g. \"0.3\", \"0.4\")",
+      }),
       server: mcpServerRun,
       tools: z.array(mcpServerToolEntry).optional(),
       user_config: z.record(z.string(), z.unknown()).optional(),
