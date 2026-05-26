@@ -279,7 +279,8 @@
     "_meta": {
       "type": "object",
       "propertyNames": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+\\/)?[A-Za-z0-9._-]+$"
       },
       "additionalProperties": {
         "type": "object",

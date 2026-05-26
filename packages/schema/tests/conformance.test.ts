@@ -574,6 +574,24 @@ describe("mcp-server manifest (§3.4)", () => {
     });
   });
 
+  test("user_config entry must be MCPB-typed (§3.4)", () => {
+    expectValid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      user_config: {
+        api_key: { type: "string", title: "API key", sensitive: true },
+      },
+    });
+    // missing/invalid type discriminant
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      user_config: { api_key: { title: "no type" } },
+    });
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      user_config: { api_key: { type: "secret" } },
+    });
+  });
+
   test("uv server type requires manifest_version 0.4", () => {
     expectInvalid(mcpServerManifestSchema, {
       ...validMcpServer,
@@ -663,6 +681,13 @@ describe("integration source (§7.1)", () => {
     expectInvalid(integrationManifestSchema, {
       ...validIntegrationOauth2,
       source: { kind: "remote", remote: { url: "https://e.com/mcp", transport: "ws" } },
+    });
+  });
+
+  test("remote source url must be a URL (§7.1)", () => {
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "remote", remote: { url: "not a url", transport: "sse" } },
     });
   });
 
@@ -825,14 +850,35 @@ describe("integration auth methods (§7.2 – §7.5)", () => {
     );
   });
 
-  test("token_endpoint_auth_method enum closed", () => {
+  test("token_endpoint_auth_method accepts RFC 7591 values, rejects unknown (§7.3)", () => {
+    for (const m of [
+      "client_secret_basic",
+      "client_secret_post",
+      "client_secret_jwt",
+      "private_key_jwt",
+      "tls_client_auth",
+      "self_signed_tls_client_auth",
+      "none",
+    ]) {
+      expectValid(
+        integrationManifestSchema,
+        withAuth({
+          o: {
+            type: "oauth2",
+            issuer: "https://e.com",
+            token_endpoint_auth_method: m,
+            delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+          },
+        }),
+      );
+    }
     expectInvalid(
       integrationManifestSchema,
       withAuth({
         o: {
           type: "oauth2",
           issuer: "https://e.com",
-          token_endpoint_auth_method: "client_secret_jwt",
+          token_endpoint_auth_method: "made_up_method",
           delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
         },
       }),
@@ -1175,6 +1221,28 @@ describe("extensibility — _meta (§10)", () => {
 
   test("_meta values must be objects", () => {
     expectInvalid(agentManifestSchema, { ...validAgent, _meta: { "dev.afps/x": "string-not-object" } });
+  });
+
+  test("_meta accepts a bare name and the dev.appstrate.afps transitional alias (§10.1)", () => {
+    expectValid(agentManifestSchema, { ...validAgent, _meta: { policy: { tier: "high" } } });
+    expectValid(agentManifestSchema, {
+      ...validAgent,
+      _meta: { "dev.appstrate.afps/x": { a: 1 } },
+    });
+  });
+
+  test("_meta rejects MCP-reserved prefixes (§10.1)", () => {
+    expectInvalid(agentManifestSchema, { ...validAgent, _meta: { "mcp/foo": { a: 1 } } });
+    expectInvalid(agentManifestSchema, {
+      ...validAgent,
+      _meta: { "modelcontextprotocol.io/x": { a: 1 } },
+    });
+  });
+
+  test("_meta rejects malformed keys (§10.1 / Appendix B META_NAMESPACE_KEY)", () => {
+    expectInvalid(agentManifestSchema, { ...validAgent, _meta: { "bad key": { a: 1 } } });
+    // single-label prefix is not a valid reverse-DNS prefix
+    expectInvalid(agentManifestSchema, { ...validAgent, _meta: { "single/x": { a: 1 } } });
   });
 
   test("unknown top-level fields are preserved (looseObject)", () => {

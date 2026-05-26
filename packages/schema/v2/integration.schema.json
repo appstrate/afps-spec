@@ -279,7 +279,8 @@
     "_meta": {
       "type": "object",
       "propertyNames": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+\\/)?[A-Za-z0-9._-]+$"
       },
       "additionalProperties": {
         "type": "object",
@@ -337,7 +338,7 @@
               "properties": {
                 "url": {
                   "type": "string",
-                  "minLength": 1
+                  "format": "uri"
                 },
                 "transport": {
                   "type": "string",
@@ -409,22 +410,30 @@
             ]
           },
           "issuer": {
-            "type": "string"
+            "type": "string",
+            "format": "uri"
           },
           "authorization_endpoint": {
-            "type": "string"
+            "type": "string",
+            "format": "uri"
           },
           "token_endpoint": {
-            "type": "string"
+            "type": "string",
+            "format": "uri"
           },
           "userinfo_endpoint": {
-            "type": "string"
+            "type": "string",
+            "format": "uri"
           },
           "token_endpoint_auth_method": {
             "type": "string",
             "enum": [
               "client_secret_basic",
               "client_secret_post",
+              "client_secret_jwt",
+              "private_key_jwt",
+              "tls_client_auth",
+              "self_signed_tls_client_auth",
               "none"
             ]
           },
@@ -833,7 +842,51 @@
                 }
               }
             },
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "required": [
+                      "http"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "env"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "files"
+                    ]
+                  }
+                ]
+              },
+              {
+                "if": {
+                  "required": [
+                    "http"
+                  ]
+                },
+                "then": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "env"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "files"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
           },
           "authorized_uris": {
             "type": "array",
@@ -852,8 +905,108 @@
           "type",
           "delivery"
         ],
-        "additionalProperties": {}
-      }
+        "additionalProperties": {},
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "oauth2"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "required": [
+                    "issuer"
+                  ]
+                },
+                {
+                  "required": [
+                    "authorization_endpoint",
+                    "token_endpoint"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": [
+                    "api_key",
+                    "basic",
+                    "mtls",
+                    "custom"
+                  ]
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "required": [
+                "credentials"
+              ],
+              "properties": {
+                "credentials": {
+                  "required": [
+                    "schema"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "connect"
+              ]
+            },
+            "then": {
+              "properties": {
+                "type": {
+                  "const": "custom"
+                },
+                "connect": {
+                  "oneOf": [
+                    {
+                      "required": [
+                        "login"
+                      ],
+                      "not": {
+                        "required": [
+                          "tool"
+                        ]
+                      }
+                    },
+                    {
+                      "required": [
+                        "tool"
+                      ],
+                      "not": {
+                        "required": [
+                          "login"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        ]
+      },
+      "minProperties": 1
     },
     "tools_policy": {
       "type": "object",
@@ -870,7 +1023,8 @@
             }
           },
           "required_auth_key": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
           },
           "url_patterns": {
             "type": "array",

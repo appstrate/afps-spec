@@ -23,6 +23,80 @@ const OUTPUT_DIR = resolve(dirname(import.meta.filename!), "..", VERSION_TAG);
 
 const isCheck = process.argv.includes("--check");
 
+/**
+ * Cross-field MUST rules that the Zod `.superRefine` enforces but
+ * `toJSONSchema` cannot express. We inject the JSON Schema 2020-12
+ * equivalents (`if`/`then`/`anyOf`/`oneOf`/`minProperties`) so that
+ * JSON-only validators reject the same shapes the Zod runtime rejects.
+ *
+ * Keep these in lockstep with the `.superRefine` logic in `schemas.ts`
+ * (§7.3, §7.5, §7.6, §7.7, §3.4).
+ */
+function applyCrossFieldRules(filename: string, schema: Record<string, any>): void {
+  if (filename === "integration.schema.json") {
+    // §3.5 — at least one auth method.
+    schema.properties.auths.minProperties = 1;
+
+    const method = schema.properties.auths.additionalProperties as Record<string, any>;
+    method.allOf = [
+      // §7.3 — oauth2 requires issuer (discovery) OR both endpoints.
+      {
+        if: { properties: { type: { const: "oauth2" } }, required: ["type"] },
+        then: {
+          anyOf: [
+            { required: ["issuer"] },
+            { required: ["authorization_endpoint", "token_endpoint"] },
+          ],
+        },
+      },
+      // §7.5 — credentials.schema required for api_key/basic/mtls/custom.
+      {
+        if: { properties: { type: { enum: ["api_key", "basic", "mtls", "custom"] } }, required: ["type"] },
+        then: { required: ["credentials"], properties: { credentials: { required: ["schema"] } } },
+      },
+      // §7.7 — connect only valid for custom; exactly one of login/tool.
+      {
+        if: { required: ["connect"] },
+        then: {
+          properties: {
+            type: { const: "custom" },
+            connect: {
+              oneOf: [
+                { required: ["login"], not: { required: ["tool"] } },
+                { required: ["tool"], not: { required: ["login"] } },
+              ],
+            },
+          },
+          required: ["type"],
+        },
+      },
+    ];
+
+    // §7.6 — ≥1 delivery channel; http exclusive of env/files.
+    const delivery = method.properties.delivery as Record<string, any>;
+    delivery.allOf = [
+      { anyOf: [{ required: ["http"] }, { required: ["env"] }, { required: ["files"] }] },
+      {
+        if: { required: ["http"] },
+        then: { not: { anyOf: [{ required: ["env"] }, { required: ["files"] }] } },
+      },
+    ];
+  }
+
+  if (filename === "mcp-server.schema.json") {
+    // §3.4 — server.type "uv" requires manifest_version "0.4".
+    schema.allOf = [
+      {
+        if: {
+          properties: { server: { properties: { type: { const: "uv" } }, required: ["type"] } },
+          required: ["server"],
+        },
+        then: { properties: { manifest_version: { const: "0.4" } } },
+      },
+    ];
+  }
+}
+
 const {
   agentManifestSchema,
   skillManifestSchema,
@@ -80,6 +154,8 @@ for (const entry of entries) {
   }) as Record<string, unknown>;
 
   delete jsonSchema.$schema;
+
+  applyCrossFieldRules(entry.filename, jsonSchema);
 
   const final = {
     $schema: "https://json-schema.org/draft/2020-12/schema",

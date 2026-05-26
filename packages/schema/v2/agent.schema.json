@@ -280,7 +280,8 @@
     "_meta": {
       "type": "object",
       "propertyNames": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+\\/)?[A-Za-z0-9._-]+$"
       },
       "additionalProperties": {
         "type": "object",
@@ -306,7 +307,8 @@
             }
           },
           "auth_key": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
           }
         },
         "additionalProperties": {}
@@ -372,6 +374,20 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "_meta": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+\\/)?[A-Za-z0-9._-]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         }
       },
@@ -441,6 +457,20 @@
           "items": {
             "type": "string"
           }
+        },
+        "_meta": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+\\/)?[A-Za-z0-9._-]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
         }
       },
       "required": [
@@ -508,6 +538,20 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "_meta": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+\\/)?[A-Za-z0-9._-]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         }
       },

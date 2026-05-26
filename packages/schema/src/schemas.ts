@@ -111,11 +111,26 @@ export function afpsJsonSchemaOverride(ctx: { jsonSchema: Record<string, unknown
 // ─────────────────────────────────────────────
 
 /**
- * The `_meta` extension object (§10.1). A record of reverse-DNS-namespaced
- * keys whose values MUST be JSON objects. Validation is intentionally
- * permissive: consumers MUST NOT reject unknown `_meta` keys.
+ * `_meta` key pattern (Appendix B `META_NAMESPACE_KEY`) with the reserved-prefix
+ * rule from §10.1 folded in via a negative lookahead: an OPTIONAL reverse-DNS
+ * prefix (`label(.label)+/`) plus a name, where the key MUST NOT begin with the
+ * MCP-reserved `mcp` or `modelcontextprotocol` prefix. Encoding both rules in one
+ * pattern lets `toJSONSchema` emit `propertyNames.pattern` everywhere `_meta`
+ * appears, in lockstep with §10.1.
  */
-export const metaSchema = z.record(z.string(), z.record(z.string(), z.unknown()));
+export const META_NAMESPACE_KEY_REGEX =
+  /^(?!(?:mcp|modelcontextprotocol)(?:[./]|$))(?:[a-z0-9-]+(?:\.[a-z0-9-]+)+\/)?[A-Za-z0-9._-]+$/;
+
+/**
+ * The `_meta` extension object (§10.1). A record of reverse-DNS-namespaced
+ * keys whose values MUST be JSON objects. Unknown keys are accepted (consumers
+ * MUST NOT reject them); only malformed keys and MCP-reserved prefixes are
+ * rejected, and values are constrained to JSON objects.
+ */
+export const metaSchema = z.record(
+  z.string().regex(META_NAMESPACE_KEY_REGEX),
+  z.record(z.string(), z.unknown()),
+);
 
 // ─────────────────────────────────────────────
 // Schema wrapper (§5.4) — input/output/config
@@ -135,6 +150,9 @@ export const schemaWrapper = z.object({
   file_constraints: z.record(z.string(), fileConstraint).optional(),
   ui_hints: z.record(z.string(), uiHint).optional(),
   property_order: z.array(z.string()).optional(),
+  // §10 — the wrapper is an extensible object; permit the `_meta` extension key
+  // while keeping the rest of the wrapper closed.
+  _meta: metaSchema.optional(),
 });
 
 // ─────────────────────────────────────────────
@@ -184,7 +202,10 @@ export const dependenciesSchema = z
  */
 export const integrationConfiguration = z.looseObject({
   scopes: z.array(z.string()).optional(),
-  auth_key: z.string().optional(),
+  auth_key: z
+    .string()
+    .regex(AUTH_KEY_REGEX, { error: "auth_key must match ^[a-z][a-z0-9_]*$" })
+    .optional(),
 });
 
 // ─────────────────────────────────────────────
@@ -206,6 +227,24 @@ const mcpServerRun = z.looseObject({
   type: mcpServerTypeEnum,
   entry_point: z.string().min(1),
   mcp_config: mcpConfig,
+});
+
+/**
+ * One MCPB `user_config` entry (§3.4). MCPB vocabulary; `looseObject` keeps the
+ * schema forward-compatible with future MCPB additions. `type` is the required
+ * discriminant; `sensitive` is the flag the §7.6 `env.user_config_key` binding
+ * relies on.
+ */
+const userConfigEntry = z.looseObject({
+  type: z.enum(["string", "number", "boolean", "directory", "file"]),
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  default: z.unknown().optional(),
+  multiple: z.boolean().optional(),
+  sensitive: z.boolean().optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
 });
 
 const mcpServerToolEntry = z.looseObject({
@@ -244,7 +283,7 @@ const localSource = z.looseObject({
 const remoteSource = z.looseObject({
   kind: z.literal("remote"),
   remote: z.looseObject({
-    url: z.string().min(1),
+    url: z.url(),
     transport: transportEnum,
   }),
 });
@@ -282,6 +321,10 @@ export const authTypeEnum = z.enum(["oauth2", "api_key", "basic", "mtls", "custo
 export const tokenEndpointAuthMethodEnum = z.enum([
   "client_secret_basic",
   "client_secret_post",
+  "client_secret_jwt",
+  "private_key_jwt",
+  "tls_client_auth",
+  "self_signed_tls_client_auth",
   "none",
 ]);
 
@@ -427,11 +470,11 @@ const uriRestrictionFields = {
  */
 export const authMethod = z.looseObject({
   type: authTypeEnum,
-  // oauth2 (§7.3)
-  issuer: z.string().optional(),
-  authorization_endpoint: z.string().optional(),
-  token_endpoint: z.string().optional(),
-  userinfo_endpoint: z.string().optional(),
+  // oauth2 (§7.3) — endpoints and issuer are absolute URLs (SSRF surface, §8.7)
+  issuer: z.url().optional(),
+  authorization_endpoint: z.url().optional(),
+  token_endpoint: z.url().optional(),
+  userinfo_endpoint: z.url().optional(),
   token_endpoint_auth_method: tokenEndpointAuthMethodEnum.optional(),
   code_challenge_methods_supported: z.array(z.string()).optional(),
   resource: z.string().optional(),
@@ -462,7 +505,10 @@ const toolUrlPattern = z.looseObject({
 
 const integrationToolMeta = z.looseObject({
   required_scopes: z.array(z.string()).optional(),
-  required_auth_key: z.string().optional(),
+  required_auth_key: z
+    .string()
+    .regex(AUTH_KEY_REGEX, { error: "required_auth_key must match ^[a-z][a-z0-9_]*$" })
+    .optional(),
   url_patterns: z.array(toolUrlPattern).optional(),
 });
 
@@ -664,7 +710,7 @@ export function createSchemas(majorVersion: number) {
       }),
       server: mcpServerRun,
       tools: z.array(mcpServerToolEntry).optional(),
-      user_config: z.record(z.string(), z.unknown()).optional(),
+      user_config: z.record(z.string(), userConfigEntry).optional(),
     })
     .superRefine((val, ctx) => {
       // uv server type requires manifest_version 0.4 (§3.4).

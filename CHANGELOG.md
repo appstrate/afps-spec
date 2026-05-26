@@ -1,5 +1,71 @@
 # Changelog
 
+## v2.0.5 — 2026-05-26
+
+**JSON Schema cross-field rules, `_meta` namespace enforcement, schema
+tightenings, and Appendix A completion.** Still within the 2.0 draft window;
+the schema additions reject shapes the spec text already forbids and the spec
+edits are editorial or additive.
+
+### Schema (`@afps-spec/schema@2.0.5`)
+
+- **Cross-field MUST rules now emitted into the JSON Schemas** (previously only
+  the Zod runtime enforced them). `generate.ts` injects JSON Schema 2020-12
+  `if`/`then`/`anyOf`/`oneOf`/`minProperties` so JSON-only validators reject the
+  same shapes Zod rejects: `auths` ≥1 entry; oauth2 requires `issuer` or both
+  endpoints; `credentials.schema` required for `api_key`/`basic`/`mtls`/`custom`;
+  `connect` only on `type: custom` with exactly one of `login`/`tool`; `delivery`
+  ≥1 channel with `http` mutually exclusive of `env`/`files`; `server.type: "uv"`
+  requires `manifest_version: "0.4"`.
+- **`_meta` key validation** (§10.1 + Appendix B `META_NAMESPACE_KEY`) — keys
+  must match the namespaced-key pattern and MUST NOT use the MCP-reserved `mcp`
+  / `modelcontextprotocol` prefixes; values remain constrained to JSON objects.
+  Bare names and the `dev.appstrate.afps/` transitional alias are accepted.
+- **`_meta` permitted on the input/output/config schema wrappers** (§10) while
+  keeping the rest of each wrapper closed.
+- **MCPB `user_config` entries are now typed** (`type` ∈ string/number/boolean/
+  directory/file, plus `title`/`description`/`required`/`default`/`multiple`/
+  `sensitive`/`min`/`max`) instead of an opaque record.
+- **`token_endpoint_auth_method` widened** to the full RFC 7591 / OIDC set
+  (`client_secret_jwt`, `private_key_jwt`, `tls_client_auth`,
+  `self_signed_tls_client_auth` added) — the spec wording was already open.
+- **URL format** enforced on OAuth `issuer`/`authorization_endpoint`/
+  `token_endpoint`/`userinfo_endpoint` and `source.remote.url` (SSRF surface).
+- **`AUTH_KEY_REGEX`** now applied to `tools_policy.<name>.required_auth_key`
+  and the deprecated `integrations_configuration.<id>.auth_key`.
+- **mcp-server.schema.json description** no longer references a non-existent
+  `_meta["dev.afps/mcp-server"]` contract.
+- Conformance + purity tests added for all of the above (106 tests pass).
+
+### Specification
+
+- **§1.2.1 / README / primer**: replaced the goal/capability/connection diagram
+  with a packaging-centric ecosystem stack; redrew the dependency diagram to
+  show `integration.source.kind:"local"` → `mcp-server` nesting; dropped the
+  "an mcp-server manifest is an MCPB manifest" / ".mcpb rename works" claims that
+  contradicted §2.5/§3.4 (also corrected the §1.3 glossary entry).
+- **TOC**: added the missing §7.11 entry.
+- **§3.1 `dependencies`**: documented both compact and object dependency forms.
+- **§3.2**: added a "Required files" subheading for `prompt.md`.
+- **§3.5**: completed the integration common-fields list.
+- **§4.4 / §6.1 / §7.4 / §9**: stopped treating the deprecated
+  `integrations_configuration` map as canonical; per-field merge precedence.
+- **§7.3**: `token_endpoint_auth_method` value list expanded to match the schema.
+- **§7.6**: annotated the delivery sample as a syntax catalogue (http is MUTEX
+  with env/files).
+- **§7.7**: corrected the regex-extractor note (Arazzo regex is a Criterion
+  type, not a Selector Object type).
+- **Appendix A**: added rows for `prompt.md`, `server.entry_point`/`mcp_config`,
+  `source.{server,remote}` sub-fields, all `delivery.{http,env,files}` leaf
+  fields, and `connect.login.{expires_in_output,identity_outputs}` /
+  `connect.{tool,limits}`; clarified the `_meta` scope.
+
+### Examples
+
+- New `examples/integration-local-mcp` (source.kind:"local" + env delivery).
+- `agent-full`: `auth_key` added to the gmail dependency entry.
+- `integration-oauth2`: `{{callbackUrl}}` → `{{callback_url}}`.
+
 ## v2.0.4 — 2026-05-26
 
 **Schema tightenings + §7.6 editorial correction.** No spec breaking changes:

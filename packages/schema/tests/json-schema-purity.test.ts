@@ -159,6 +159,49 @@ describe("JSON Schema purity — generated schemas", () => {
   }
 });
 
+describe("cross-field MUST rules injected into JSON Schema (lockstep with Zod superRefine)", () => {
+  const integ = JSON.parse(
+    readFileSync(join(import.meta.dir, "../v2/integration.schema.json"), "utf-8"),
+  );
+  const mcp = JSON.parse(
+    readFileSync(join(import.meta.dir, "../v2/mcp-server.schema.json"), "utf-8"),
+  );
+
+  test("§3.5 — auths requires at least one entry (minProperties)", () => {
+    expect(integ.properties.auths.minProperties).toBe(1);
+  });
+
+  test("§7 — auth method carries the conditional allOf rules", () => {
+    const allOf = integ.properties.auths.additionalProperties.allOf;
+    expect(Array.isArray(allOf)).toBe(true);
+    // oauth2 → issuer OR endpoints
+    const oauth = allOf.find((r: any) => r.if?.properties?.type?.const === "oauth2");
+    expect(oauth?.then?.anyOf).toBeDefined();
+    // api_key/basic/mtls/custom → credentials.schema required
+    const creds = allOf.find((r: any) =>
+      Array.isArray(r.if?.properties?.type?.enum),
+    );
+    expect(creds?.then?.properties?.credentials?.required).toContain("schema");
+    // connect → custom only + exactly one of login/tool
+    const connect = allOf.find((r: any) => r.if?.required?.includes("connect"));
+    expect(connect?.then?.properties?.type?.const).toBe("custom");
+    expect(connect?.then?.properties?.connect?.oneOf?.length).toBe(2);
+  });
+
+  test("§7.6 — delivery requires ≥1 channel and http is exclusive of env/files", () => {
+    const delivery = integ.properties.auths.additionalProperties.properties.delivery;
+    expect(delivery.allOf?.[0]?.anyOf?.length).toBe(3);
+    expect(delivery.allOf?.[1]?.if?.required).toContain("http");
+    expect(delivery.allOf?.[1]?.then?.not).toBeDefined();
+  });
+
+  test("§3.4 — server.type uv requires manifest_version 0.4", () => {
+    const rule = mcp.allOf?.[0];
+    expect(rule?.if?.properties?.server?.properties?.type?.const).toBe("uv");
+    expect(rule?.then?.properties?.manifest_version?.const).toBe("0.4");
+  });
+});
+
 describe("JSON Schema purity — manifest validation", () => {
   test("manifest with file field using standard JSON Schema is accepted", () => {
     const manifest = {

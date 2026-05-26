@@ -193,11 +193,11 @@ Packaging    AFPS                                 "how it is all declared and di
 - **Manifest**: the root `manifest.json` file contained in every AFPS package archive.
 - **Companion file**: a required non-manifest file such as `prompt.md`, `SKILL.md`, or an MCP server entry point.
 - **Dependency**: an entry under `dependencies`, declaring a package that this package depends on, with a semver version range.
-- **MCP server**: a package whose manifest is an MCP Bundle (MCPB) manifest describing how to run a local MCP tool server (§3.4).
+- **MCP server**: a package whose manifest is AFPS-native at the root and adopts the MCP Bundle (MCPB) field vocabulary to describe how to run a local MCP tool server (§3.4).
 - **Integration**: a package describing a credentialed binding to an external service — its capability source, authentication method(s), and credential delivery (§3.5, §7).
 - **Capability source**: the surface an integration binds to — a local MCP server, a remote MCP endpoint, or an HTTP API (§7.1).
-- **Auth method**: a named authentication configuration under an integration's `auths` map (§7.2).
-- **Delivery**: the declaration of where an acquired credential is injected at runtime — HTTP request, environment variable, or file (§7.6).
+- **Auth method**: a named authentication configuration under an integration's `auths` map (§7.2). This document uses "auth method" and "authentication method" interchangeably.
+- **Delivery**: the declaration of where an acquired credential is injected at runtime — HTTP request, environment variable, or file (§7.6). The runtime act of placing the credential is referred to as *injection*; "credential delivery" and "delivery" denote the same declaration.
 
 ### 1.4 Conformance
 
@@ -902,7 +902,7 @@ These fields use the snake_case field names defined by [RFC 8414] and [OpenID Co
 - `authorization_endpoint` (string, URI) — REQUIRED when discovery is unavailable. [RFC 8414]
 - `token_endpoint` (string, URI) — REQUIRED when discovery is unavailable. [RFC 8414]
 - `userinfo_endpoint` (string, URI) — OPTIONAL. [OpenID Connect Discovery]
-- `token_endpoint_auth_method` (string) — OPTIONAL. One of the values defined by [RFC 7591] / [OpenID Connect Core], e.g. `client_secret_basic` (default per [RFC 8414] §2 / [RFC 7591] §2), `client_secret_post`, `none`.
+- `token_endpoint_auth_method` (string) — OPTIONAL. One of the values defined by [RFC 7591] / [OpenID Connect Core]: `client_secret_basic` (default per [RFC 8414] §2 / [RFC 7591] §2), `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or `none`.
 - `code_challenge_methods_supported` (array of strings) — OPTIONAL; PKCE methods, e.g. `["S256"]`. [RFC 8414] / [RFC 7636]. A consumer SHOULD use `S256` when supported. When a provider supports PKCE but does not advertise it, a manifest MAY supply `["S256"]` as a manual override.
 - `resource` (string, URI) — OPTIONAL; the protected-resource indicator sent on authorization and token requests per [RFC 8707]. This field is named `resource`, not `audience`. A consumer SHOULD send it for forward compatibility even when the authorization server is known to ignore it; the resource server MUST independently validate the token audience.
 - `authorization_params` (object) — OPTIONAL; additional query parameters appended to the authorization request (an AFPS field), e.g. `{ "access_type": "offline" }`.
@@ -985,7 +985,7 @@ The block below is a **syntax catalogue** showing all three delivery shapes; it 
 }
 ```
 
-- **`http`** — credential injection into an HTTP request. `in` (`header`, `query`, `cookie`) and `name` adopt the OpenAPI Security Scheme location vocabulary; `prefix` and `value` are AFPS additions (OpenAPI has no value template). The combination `http` + `Authorization` + `"Bearer "` maps to the `Authorization: Bearer` convention. `encoding` is OPTIONAL and, when present, MUST be `base64` ([RFC 4648] §4), applied to the rendered `value` string (NOT to `prefix`), with the encoded result then concatenated after `prefix` — expressing HTTP Basic vendor patterns per [RFC 7617] (for example `value: "{$credential.email}/token:{$credential.api_key}"`, `prefix: "Basic "`, `encoding: "base64"` produces `Authorization: Basic <base64(email/token:api_key)>`, leaving the `Basic ` scheme prefix unencoded). Consumers MUST reject an unknown `encoding`. `allow_server_override` (boolean, default `false`) governs whether the source server may override the injected value. HTTP delivery is a man-in-the-middle/proxy injection in which the source server never sees the secret.
+- **`http`** — credential injection into an HTTP request. `in` (`header`, `query`, `cookie`) and `name` adopt the OpenAPI Security Scheme location vocabulary; `prefix` and `value` are AFPS additions (OpenAPI has no value template). The combination `http` + `Authorization` + `"Bearer "` maps to the `Authorization: Bearer` convention. `encoding` is OPTIONAL and, when present, MUST be `base64` ([RFC 4648] §4), applied to the rendered `value` string (NOT to `prefix`), with the encoded result then concatenated after `prefix` — expressing HTTP Basic vendor patterns per [RFC 7617] (for example `value: "{$credential.email}/token:{$credential.api_key}"`, `prefix: "Basic "`, `encoding: "base64"` produces `Authorization: Basic <base64(email/token:api_key)>`, leaving the `"Basic "` scheme prefix unencoded). Consumers MUST reject an unknown `encoding`. `allow_server_override` (boolean, default `false`) governs whether the source server may override the injected value. HTTP delivery is a man-in-the-middle/proxy injection in which the source server never sees the secret.
 - **`env`** — injection as one or more environment variables. Each entry has a `value` template, an OPTIONAL `sensitive` boolean, and an OPTIONAL `user_config_key` string. `env` delivery maps onto MCPB `user_config` → `${user_config.KEY}` (§3.4): the source server holds the secret. `user_config_key` names the MCPB `user_config` key that an AFPS build step MUST inject into the referenced `mcp-server` so the rendered `value` reaches the server through `${user_config.<user_config_key>}` in `mcp_config.env`. When `user_config_key` is omitted, consumers SHOULD default to the env-variable name itself (the map key). This is the delivery mode that lets a `local`-source integration's referenced `mcp-server` also run standalone in an MCPB host.
 - **`files`** — injection as one or more files. Each entry has a `value` template and an OPTIONAL `mode` (an octal string such as `"0400"`; default `"0400"`).
 
@@ -1316,14 +1316,22 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `ui_hints` | agent schema wrapper | object | MAY | keyed by property name; `placeholder` | none |
 | `property_order` | agent schema wrapper | string[] | MAY | presentation order hint | none |
 | `timeout` | agent | number | MAY | timeout hint in seconds | none |
+| `prompt.md` | agent archive | file | MUST | non-empty companion file at archive root; the agent's objective (§6.1) | none |
 | `manifest_version` | mcp-server | string | MUST | tags the MCPB-vocabulary version of `server`/`tools`/`user_config`; `0.3` baseline, `0.4` for `uv` | none |
 | `server` | mcp-server | object | MUST | run declaration (`type`, `entry_point`, `mcp_config`); MCPB vocabulary | none |
 | `server.type` | mcp-server | string | MUST | `node\|python\|binary` (`manifest_version=0.3`); `uv` (`0.4`) | none |
+| `server.entry_point` | mcp-server | string | MUST | relative path within the archive to the server entry point; MCPB vocabulary | none |
+| `server.mcp_config` | mcp-server | object | MUST | `{ command, args?, env?, platform_overrides? }`; MCPB vocabulary | none |
 | `tools` | mcp-server | array | MAY | advisory tool list (`{ name, description }`); MCPB vocabulary | none |
 | `user_config` | mcp-server | object | MAY | user configuration; `sensitive: true` for secrets; MCPB vocabulary | none |
 | `source` | integration | object | MUST | `kind` ∈ `local\|remote\|api` plus matching sub-object | none |
 | `source.server` | integration | object | MUST for `kind=local` | `{ name (scoped), version (range), vendored? }` | none |
+| `source.server.name` | integration | string | MUST for `kind=local` | scoped name of the referenced `mcp-server` (§2.2) | none |
+| `source.server.version` | integration | string | MUST for `kind=local` | semver range for the referenced `mcp-server` | none |
+| `source.server.vendored` | integration | boolean | MAY | records that the server payload is bundled MCPB-style | `false` |
 | `source.remote` | integration | object | MUST for `kind=remote` | `{ url, transport: streamable-http\|sse }` | none |
+| `source.remote.url` | integration | string | MUST for `kind=remote` | URI of the hosted MCP endpoint | none |
+| `source.remote.transport` | integration | string | MUST for `kind=remote` | `streamable-http\|sse` | none |
 | `source.api` | integration | object | MUST for `kind=api` | `{ upload_protocols?: open string array }` | none |
 | `source.api.upload_protocols` | integration | string[] | MAY | open array; reserved values: `google-resumable`, `s3-multipart`, `tus`, `ms-resumable`. Custom protocols SHOULD use a reverse-DNS prefix | none |
 | `auths` | integration | object | MUST | map keyed by `^[a-z][a-z0-9_]*$`; ≥1 entry | none |
@@ -1344,15 +1352,27 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `auths.<key>.delivery` | integration | object | MUST | ≥1 of `http`, `env`, `files`; `http` exclusive of `env`/`files` | none |
 | `auths.<key>.delivery.http` | integration | object | MAY | `{ in, name, prefix?, value, encoding?, allow_server_override? }` | none |
 | `auths.<key>.delivery.http.in` | integration | string | MUST if `http` present | `header\|query\|cookie` (OpenAPI) | none |
-| `auths.<key>.delivery.http.encoding` | integration | string | MAY | `base64` (RFC 4648 §4) | none |
+| `auths.<key>.delivery.http.name` | integration | string | MUST if `http` present | header/query/cookie parameter name (OpenAPI) | none |
+| `auths.<key>.delivery.http.value` | integration | string | MUST if `http` present | value template (`{$credential.*}`, `{$outputs.*}`) | none |
+| `auths.<key>.delivery.http.prefix` | integration | string | MAY | literal prefix prepended to the rendered value (e.g. `"Bearer "`) | none |
+| `auths.<key>.delivery.http.encoding` | integration | string | MAY | `base64` (RFC 4648 §4), applied to `value` only | none |
+| `auths.<key>.delivery.http.allow_server_override` | integration | boolean | MAY | whether the source server may override the injected value | `false` |
 | `auths.<key>.delivery.env` | integration | object | MAY | map of `VAR` → `{ value, sensitive?, user_config_key? }`; maps to MCPB `user_config` | none |
+| `auths.<key>.delivery.env.<var>.value` | integration | string | MUST if entry present | value template for the environment variable | none |
+| `auths.<key>.delivery.env.<var>.sensitive` | integration | boolean | MAY | marks the value secret (aligns with MCPB `user_config` `sensitive`) | `false` |
 | `auths.<key>.delivery.env.<var>.user_config_key` | integration | string | MAY | MCPB `user_config` key for `local`-source binding; defaults to the env-variable name | none |
+| `auths.<key>.delivery.files.<path>.value` | integration | string | MUST if entry present | value template for the file contents | none |
+| `auths.<key>.delivery.files.<path>.mode` | integration | string | MAY | octal string (e.g. `"0400"`) | `"0400"` |
 | `auths.<key>.callback_url_hint` | integration | string | MAY | OAuth-client registration callback hint (often containing `{{callback_url}}`) | none |
 | `auths.<key>.delivery.files` | integration | object | MAY | map of path → `{ value, mode? }`; `mode` octal string | `mode` `"0400"` |
 | `auths.<key>.connect` | integration | object | MAY (custom only) | exactly one of `login` / `tool`; optional `limits` | none |
-| `auths.<key>.connect.login.request` | integration | object | MUST if `login` present | inline HTTP request | none |
+| `auths.<key>.connect.login.request` | integration | object | MUST if `login` present | inline HTTP request `{ method, url, headers?, body?, content_type? }` | none |
 | `auths.<key>.connect.login.success_criteria` | integration | object[] | MAY | Arazzo Criterion; default HTTP 2xx | HTTP 2xx |
 | `auths.<key>.connect.login.outputs` | integration | object | MAY | Arazzo runtime-expression string, Arazzo Selector Object `{context,selector,type}`, or AFPS extractor (`cookie`/`jwt`/`regex`) | none |
+| `auths.<key>.connect.login.expires_in_output` | integration | string | MAY | name of the output carrying credential expiry | none |
+| `auths.<key>.connect.login.identity_outputs` | integration | string[] | MAY | names of outputs that establish the connection identity | none |
+| `auths.<key>.connect.tool` | integration | object | MAY (custom only) | experimental alternative to `login`; tools used are auto-hidden (`hidden_tools`) | none |
+| `auths.<key>.connect.limits` | integration | object | MAY | `{ request_timeout_ms?, max_response_bytes? }` (positive numbers) | none |
 | `auths.<key>.authorized_uris` | integration | string[] | MAY | allowed upstream URI patterns (glob) | none |
 | `auths.<key>.allow_all_uris` | integration | boolean | MAY | unrestricted upstream access | `false` |
 | `tools_policy` | integration | object | MAY | sparse per-tool policy table (augments canonical tool catalog of the referenced source); keys MUST resolve in the canonical catalog | none |
@@ -1375,7 +1395,7 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `scripts/` | skill archive | directory | MAY | executable code for agents | none |
 | `references/` | skill archive | directory | MAY | additional documentation | none |
 | `assets/` | skill archive | directory | MAY | static resources, templates | none |
-| `_meta` | any manifest | object | MAY | reverse-DNS namespaced extension data (§10) | none |
+| `_meta` | any manifest or extensible nested object | object | MAY | reverse-DNS namespaced extension data (§10); permitted on the root manifest and on any nested object the spec does not explicitly close | none |
 
 ### Appendix B. Regex Patterns
 
