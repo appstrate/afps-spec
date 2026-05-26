@@ -18,7 +18,14 @@ jobs:
 
       - name: Validate schema syntax
         run: |
-          for f in packages/schema/v1/*.schema.json; do
+          set -e
+          shopt -s nullglob
+          files=(packages/schema/v2/*.schema.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "FAIL: no schemas found in packages/schema/v2/"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
             echo "Validating $f..."
             python3 -c "import json; json.load(open('$f'))" || exit 1
           done
@@ -49,7 +56,7 @@ jobs:
 
             # Extract type from manifest to pick the right schema
             type=$(python3 -c "import json; print(json.load(open('$manifest'))['type'])")
-            schema="packages/schema/v1/${type}.schema.json"
+            schema="packages/schema/v2/${type}.schema.json"
 
             if [ ! -f "$schema" ]; then
               echo "FAIL: $manifest references type '$type' but $schema not found"

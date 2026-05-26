@@ -1,10 +1,10 @@
 {
-  "$schema": "https://afps.appstrate.dev/packages/schema/v1/agent.schema.json",
+  "$schema": "https://afps.appstrate.dev/packages/schema/v2/agent.schema.json",
   "name": "@example/customer-intake",
   "version": "1.2.0",
   "type": "agent",
-  "schemaVersion": "1.0",
-  "displayName": "Customer Intake Assistant",
+  "schema_version": "2.0",
+  "display_name": "Customer Intake Assistant",
   "description": "Collects inbound requests and prepares a structured summary.",
   "keywords": ["workflow", "intake", "support"],
   "license": "MIT",
@@ -14,16 +14,17 @@
     "skills": {
       "@example/rewrite-tone": "^1.0.0"
     },
-    "tools": {
+    "mcp_servers": {
       "@example/fetch-json": "^1.0.0"
     },
-    "providers": {
-      "@example/gmail": "^1.0.0"
-    }
-  },
-  "providersConfiguration": {
-    "@example/gmail": {
-      "scopes": ["gmail.readonly", "gmail.send"]
+    "integrations": {
+      "@example/gmail": {
+        "version": "^1.0.0",
+        "scopes": [
+          "https://www.googleapis.com/auth/gmail.readonly",
+          "https://www.googleapis.com/auth/gmail.send"
+        ]
+      }
     }
   },
   "input": {
@@ -53,18 +54,18 @@
       },
       "required": ["inbox_query"]
     },
-    "fileConstraints": {
+    "file_constraints": {
       "attachments": {
         "accept": ".pdf,.docx",
-        "maxSize": 10485760
+        "max_size": 10485760
       }
     },
-    "uiHints": {
+    "ui_hints": {
       "inbox_query": {
         "placeholder": "label:inbox newer_than:7d"
       }
     },
-    "propertyOrder": ["inbox_query", "attachments", "priority"]
+    "property_order": ["inbox_query", "attachments", "priority"]
   },
   "output": {
     "schema": {
@@ -89,7 +90,7 @@
       },
       "required": ["summary", "ticket_count", "needs_follow_up"]
     },
-    "propertyOrder": ["summary", "ticket_count", "needs_follow_up", "labels"]
+    "property_order": ["summary", "ticket_count", "needs_follow_up", "labels"]
   },
   "config": {
     "schema": {
@@ -123,7 +124,7 @@
       },
       "required": ["team_name"]
     },
-    "propertyOrder": [
+    "property_order": [
       "team_name",
       "language",
       "max_messages",

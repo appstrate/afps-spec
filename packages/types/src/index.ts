@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Appstrate contributors
 
 /**
- * @afps-spec/types — TypeScript bindings for AFPS 1.3+ contracts.
+ * @afps-spec/types — TypeScript bindings for AFPS 2.0 contracts.
  *
  * Canonical TS projection of the language-agnostic AFPS specification
  * (see afps-spec/spec.md §8). These are the contracts every AFPS-
@@ -30,9 +30,9 @@ export interface DependencyRef {
   version: string;
 }
 
-export type ToolRef = DependencyRef;
-export type ProviderRef = DependencyRef;
 export type SkillRef = DependencyRef;
+export type McpServerRef = DependencyRef;
+export type IntegrationRef = DependencyRef;
 
 /**
  * JSON-Schema-shaped parameter definition for a tool.
@@ -46,8 +46,8 @@ export type JSONSchema = Record<string, unknown>;
 // ─────────────────────────────────────────────
 
 /**
- * A Tool is the unit of capability surfaced to the LLM. Tools produced
- * by a runtime's tool resolver and by its provider resolver share this
+ * A Tool is the unit of capability surfaced to the LLM. Tools backed by
+ * MCP servers and tools reached through an integration share this
  * contract — the LLM cannot tell them apart.
  */
 export interface Tool {
@@ -118,7 +118,7 @@ export interface ToolResult {
  *   - output.*   (@afps/output)
  *   - report.*   (@afps/report)
  *   - log.*      (@afps/log)
- *   - provider.* (@afps/provider-*, provider resolver implementations)
+ *   - integration.* (integration-backed tool implementations)
  *
  * Third-party tools SHOULD use their own namespace (e.g. "@my-org/audit.*").
  */

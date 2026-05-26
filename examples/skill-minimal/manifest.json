@@ -1,8 +1,8 @@
 {
-  "$schema": "https://afps.appstrate.dev/packages/schema/v1/skill.schema.json",
+  "$schema": "https://afps.appstrate.dev/packages/schema/v2/skill.schema.json",
   "name": "@example/rewrite-tone",
   "version": "1.0.0",
   "type": "skill",
-  "displayName": "Rewrite Tone"
+  "schema_version": "2.0",
+  "display_name": "Rewrite Tone"
 }
-

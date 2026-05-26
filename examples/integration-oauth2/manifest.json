@@ -1,0 +1,77 @@
+{
+  "$schema": "https://afps.appstrate.dev/packages/schema/v2/integration.schema.json",
+  "name": "@example/gmail",
+  "version": "1.0.0",
+  "type": "integration",
+  "schema_version": "2.0",
+  "display_name": "Gmail",
+  "description": "Email service connector using OAuth2.",
+  "keywords": ["email", "productivity"],
+  "icon": "https://cdn.simpleicons.org/gmail",
+  "repository": "https://developers.google.com/workspace/gmail/api",
+  "source": {
+    "kind": "api",
+    "api": {}
+  },
+  "auths": {
+    "oauth": {
+      "type": "oauth2",
+      "issuer": "https://accounts.google.com",
+      "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_endpoint": "https://oauth2.googleapis.com/token",
+      "token_endpoint_auth_method": "client_secret_basic",
+      "authorization_params": {
+        "access_type": "offline",
+        "prompt": "consent"
+      },
+      "default_scopes": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.send"
+      ],
+      "scope_catalog": [
+        {
+          "value": "https://www.googleapis.com/auth/gmail.readonly",
+          "label": "Read-only access"
+        },
+        {
+          "value": "https://www.googleapis.com/auth/gmail.send",
+          "label": "Send messages"
+        },
+        {
+          "value": "https://www.googleapis.com/auth/gmail.compose",
+          "label": "Compose and send drafts"
+        }
+      ],
+      "delivery": {
+        "http": {
+          "in": "header",
+          "name": "Authorization",
+          "prefix": "Bearer ",
+          "value": "{$credential.access_token}"
+        }
+      },
+      "authorized_uris": [
+        "https://gmail.googleapis.com/*",
+        "https://www.googleapis.com/gmail/*"
+      ],
+      "allow_all_uris": false,
+      "callback_url_hint": "Set the authorized redirect URI to: {{callbackUrl}}"
+    }
+  },
+  "setup_guide": {
+    "steps": [
+      {
+        "label": "Create a Google Cloud project",
+        "url": "https://console.cloud.google.com/apis/library/gmail.googleapis.com"
+      },
+      {
+        "label": "Configure the OAuth consent screen",
+        "url": "https://console.cloud.google.com/apis/credentials/consent"
+      },
+      {
+        "label": "Create OAuth credentials",
+        "url": "https://console.cloud.google.com/apis/credentials"
+      }
+    ]
+  }
+}

@@ -1,0 +1,884 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://afps.appstrate.dev/packages/schema/v2/integration.schema.json",
+  "$comment": "SPDX-License-Identifier: CC-BY-4.0 — Copyright (c) 2026 Appstrate contributors",
+  "title": "AFPS Integration Manifest",
+  "description": "Manifest schema for AFPS 2.0 integration packages. An integration declares a capability source, one or more authentication methods, and credential delivery.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "integration"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "long_description": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "type": "string"
+    },
+    "author": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": {}
+        }
+      ]
+    },
+    "repository": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "directory": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "url"
+          ],
+          "additionalProperties": {}
+        }
+      ]
+    },
+    "homepage": {
+      "type": "string"
+    },
+    "documentation": {
+      "type": "string"
+    },
+    "support": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "icons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size": {
+            "type": "string",
+            "pattern": "^\\d+x\\d+$"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark",
+              "high-contrast"
+            ]
+          }
+        },
+        "required": [
+          "src"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "privacy_policies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "darwin",
+              "win32",
+              "linux"
+            ]
+          }
+        },
+        "runtimes": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "clients": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": {}
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^2\\.(0|[1-9]\\d*)$"
+    },
+    "dependencies": {
+      "type": "object",
+      "properties": {
+        "skills": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": {}
+              }
+            ]
+          }
+        },
+        "mcp_servers": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": {}
+              }
+            ]
+          }
+        },
+        "integrations": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "auth_key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": {}
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": {}
+    },
+    "_meta": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      }
+    },
+    "source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "local"
+            },
+            "server": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "vendored": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "version"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "kind",
+            "server"
+          ],
+          "additionalProperties": {}
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "remote"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "transport": {
+                  "type": "string",
+                  "enum": [
+                    "streamable-http",
+                    "sse"
+                  ]
+                }
+              },
+              "required": [
+                "url",
+                "transport"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "kind",
+            "remote"
+          ],
+          "additionalProperties": {}
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "api"
+            },
+            "api": {
+              "type": "object",
+              "properties": {
+                "upload_protocols": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "kind",
+            "api"
+          ],
+          "additionalProperties": {}
+        }
+      ]
+    },
+    "auths": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "oauth2",
+              "api_key",
+              "basic",
+              "mtls",
+              "custom"
+            ]
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "authorization_endpoint": {
+            "type": "string"
+          },
+          "token_endpoint": {
+            "type": "string"
+          },
+          "userinfo_endpoint": {
+            "type": "string"
+          },
+          "token_endpoint_auth_method": {
+            "type": "string",
+            "enum": [
+              "client_secret_basic",
+              "client_secret_post",
+              "none"
+            ]
+          },
+          "code_challenge_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resource": {
+            "type": "string"
+          },
+          "authorization_params": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "default_scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scope_catalog": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string"
+                },
+                "implies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "value",
+                "label"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "identity_claims": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "required_identity_claims": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "credentials": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "https://json-schema.org/draft/2020-12/schema"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "properties"
+                    ],
+                    "properties": {
+                      "type": {
+                        "const": "object"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "schema"
+            ],
+            "additionalProperties": {}
+          },
+          "connect": {
+            "type": "object",
+            "properties": {
+              "login": {
+                "type": "object",
+                "properties": {
+                  "request": {
+                    "type": "object",
+                    "properties": {
+                      "method": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "url": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "headers": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "method",
+                      "url"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  "success_criteria": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "condition": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "context": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "simple",
+                            "regex",
+                            "jsonpath",
+                            "xpath"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "condition"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  },
+                  "outputs": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "context": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "selector": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "jsonpath",
+                                "xpath",
+                                "jsonpointer"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "context",
+                            "selector",
+                            "type"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": [
+                            "from"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      ]
+                    }
+                  },
+                  "expires_in_output": {
+                    "type": "string"
+                  },
+                  "identity_outputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "request"
+                ],
+                "additionalProperties": {}
+              },
+              "tool": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              },
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "request_timeout_ms": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "max_response_bytes": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "additionalProperties": {}
+              }
+            },
+            "additionalProperties": {}
+          },
+          "delivery": {
+            "type": "object",
+            "properties": {
+              "http": {
+                "type": "object",
+                "properties": {
+                  "in": {
+                    "type": "string",
+                    "enum": [
+                      "header",
+                      "query",
+                      "cookie"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "prefix": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "encoding": {
+                    "type": "string",
+                    "enum": [
+                      "base64"
+                    ]
+                  },
+                  "allow_server_override": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "in",
+                  "name",
+                  "value"
+                ],
+                "additionalProperties": {}
+              },
+              "env": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sensitive": {
+                      "type": "boolean"
+                    },
+                    "user_config_key": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "files": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "mode": {
+                      "type": "string",
+                      "pattern": "^0[0-7]{3}$"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ],
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "additionalProperties": {}
+          },
+          "authorized_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allow_all_uris": {
+            "type": "boolean"
+          },
+          "callback_url_hint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "delivery"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "tools_policy": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "required_scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "required_auth_key": {
+            "type": "string"
+          },
+          "url_patterns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pattern": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "pattern"
+              ],
+              "additionalProperties": {}
+            }
+          }
+        },
+        "additionalProperties": {}
+      }
+    },
+    "hidden_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "setup_guide": {
+      "type": "object",
+      "properties": {
+        "callback_url_hint": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label"
+            ],
+            "additionalProperties": {}
+          }
+        }
+      },
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "type",
+    "source",
+    "auths"
+  ],
+  "additionalProperties": {}
+}

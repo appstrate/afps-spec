@@ -73,9 +73,11 @@ const STANDARD_PROPERTY_KEYWORDS = new Set([
 const BANNED_KEYWORDS_IN_SCHEMA = [
   "placeholder",
   "accept",
+  "max_size",
   "maxSize",
   "multiple",
   "maxFiles",
+  "property_order",
   "propertyOrder",
 ];
 
@@ -113,7 +115,7 @@ function assertNoKeywordInObject(obj: unknown, keyword: string, path: string): s
 // --- Tests ---
 
 describe("JSON Schema purity — generated schemas", () => {
-  const agentSchemaPath = join(import.meta.dir, "../v1/agent.schema.json");
+  const agentSchemaPath = join(import.meta.dir, "../v2/agent.schema.json");
   const agentSchema = JSON.parse(readFileSync(agentSchemaPath, "utf-8"));
 
   test("agent.schema.json uses JSON Schema 2020-12 dialect", () => {
@@ -139,12 +141,12 @@ describe("JSON Schema purity — generated schemas", () => {
     expect(afpsConstraint.required).toContain("properties");
   });
 
-  test("wrapper-level keys include fileConstraints, uiHints, propertyOrder", () => {
+  test("wrapper-level keys include file_constraints, ui_hints, property_order", () => {
     const wrapperKeys = Object.keys(agentSchema.properties?.input?.properties ?? {});
     expect(wrapperKeys).toContain("schema");
-    expect(wrapperKeys).toContain("fileConstraints");
-    expect(wrapperKeys).toContain("uiHints");
-    expect(wrapperKeys).toContain("propertyOrder");
+    expect(wrapperKeys).toContain("file_constraints");
+    expect(wrapperKeys).toContain("ui_hints");
+    expect(wrapperKeys).toContain("property_order");
   });
 
   for (const keyword of BANNED_KEYWORDS_IN_SCHEMA) {
@@ -163,8 +165,8 @@ describe("JSON Schema purity — manifest validation", () => {
       name: "@test/agent",
       version: "1.0.0",
       type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test",
+      schema_version: "2.0",
+      display_name: "Test",
       author: "test",
       input: {
         schema: {
@@ -190,12 +192,12 @@ describe("JSON Schema purity — manifest validation", () => {
           },
           required: ["query"],
         },
-        fileConstraints: {
-          doc: { accept: ".pdf", maxSize: 5242880 },
-          docs: { accept: ".pdf", maxSize: 10485760 },
+        file_constraints: {
+          doc: { accept: ".pdf", max_size: 5242880 },
+          docs: { accept: ".pdf", max_size: 10485760 },
         },
-        uiHints: { query: { placeholder: "Enter search..." } },
-        propertyOrder: ["query", "doc", "docs"],
+        ui_hints: { query: { placeholder: "Enter search..." } },
+        property_order: ["query", "doc", "docs"],
       },
     };
     const result = agentManifestSchema.safeParse(manifest);
@@ -207,8 +209,8 @@ describe("JSON Schema purity — manifest validation", () => {
       name: "@test/agent",
       version: "1.0.0",
       type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test",
+      schema_version: "2.0",
+      display_name: "Test",
       author: "test",
       input: {
         schema: {
@@ -228,8 +230,8 @@ describe("JSON Schema purity — manifest validation", () => {
       name: "@test/agent",
       version: "1.0.0",
       type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test",
+      schema_version: "2.0",
+      display_name: "Test",
       author: "test",
       input: {
         schema: {
@@ -243,9 +245,9 @@ describe("JSON Schema purity — manifest validation", () => {
             },
           },
         },
-        fileConstraints: { file: { accept: ".csv", maxSize: 1048576 } },
-        uiHints: { name: { placeholder: "John" } },
-        propertyOrder: ["name", "file"],
+        file_constraints: { file: { accept: ".csv", max_size: 1048576 } },
+        ui_hints: { name: { placeholder: "John" } },
+        property_order: ["name", "file"],
       },
     };
     const result = agentManifestSchema.safeParse(manifest);

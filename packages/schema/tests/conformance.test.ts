@@ -1,71 +1,185 @@
 /**
- * AFPS Conformance Test Suite
+ * AFPS 2.0 Conformance Test Suite
  *
  * Validates that:
- * 1. All spec examples pass schema validation
- * 2. Invalid manifests are correctly rejected
- * 3. Spec constraints (§2–§7) are enforced
- * 4. Extension fields (x-*) are preserved
+ * 1. Valid 2.0 manifests (agent/skill/mcp-server/integration) pass.
+ * 2. Invalid manifests are correctly rejected.
+ * 3. Spec constraints (§2–§7, §10) are enforced.
+ * 4. Legacy 1.x types (tool/provider) and camelCase fields are rejected /
+ *    not treated as standard.
  */
 
 import { describe, test, expect } from "bun:test";
-import { readFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
 import {
   agentManifestSchema,
   skillManifestSchema,
-  toolManifestSchema,
-  providerManifestSchema,
+  mcpServerManifestSchema,
+  integrationManifestSchema,
+  packageTypeEnum,
 } from "../src/schemas.ts";
 
-const ROOT = resolve(dirname(import.meta.filename!), "../../..");
+type Parser = { safeParse: (v: unknown) => { success: boolean } };
 
-async function loadExample(path: string): Promise<unknown> {
-  const content = await readFile(resolve(ROOT, path), "utf-8");
-  return JSON.parse(content);
-}
-
-function expectValid(schema: { safeParse: (v: unknown) => { success: boolean } }, value: unknown) {
+function expectValid(schema: Parser, value: unknown) {
   const result = schema.safeParse(value);
+  if (!result.success) {
+    // Surface the error to make failures debuggable.
+    expect(result).toMatchObject({ success: true });
+  }
   expect(result.success).toBe(true);
 }
 
-function expectInvalid(schema: { safeParse: (v: unknown) => { success: boolean } }, value: unknown) {
-  const result = schema.safeParse(value);
-  expect(result.success).toBe(false);
+function expectInvalid(schema: Parser, value: unknown) {
+  expect(schema.safeParse(value).success).toBe(false);
 }
 
 // ─────────────────────────────────────────────
-// §1 — Valid examples (all spec examples MUST pass)
+// Reusable valid fixtures
 // ─────────────────────────────────────────────
 
-describe("valid examples", () => {
-  test("agent-minimal", async () => {
-    expectValid(agentManifestSchema, await loadExample("examples/agent-minimal/manifest.json"));
+const validAgent = {
+  name: "@example/customer-intake",
+  version: "1.2.0",
+  type: "agent",
+  schema_version: "2.0",
+  display_name: "Customer Intake Assistant",
+  author: "AFPS Examples",
+  description: "Collects inbound requests and produces a structured summary.",
+  keywords: ["workflow", "email", "support"],
+  license: "MIT",
+  repository: "https://example.com/afps/customer-intake",
+  dependencies: {
+    integrations: { "@example/gmail": "^1.0.0" },
+    skills: { "@example/rewrite-tone": "^1.0.0" },
+    mcp_servers: { "@example/fetch-json": "^1.0.0" },
+  },
+  integrations_configuration: {
+    "@example/gmail": { scopes: ["https://www.googleapis.com/auth/gmail.readonly"] },
+  },
+  input: {
+    schema: { type: "object", properties: { query: { type: "string" } } },
+    ui_hints: { query: { placeholder: "label:inbox newer_than:7d" } },
+    property_order: ["query"],
+  },
+  output: {
+    schema: { type: "object", properties: { summary: { type: "string" } } },
+  },
+  config: {
+    schema: { type: "object", properties: { language: { type: "string", default: "fr" } } },
+  },
+  timeout: 300,
+  _meta: { "dev.afps/policy": { tier: "high" } },
+};
+
+const validSkill = {
+  name: "@example/rewrite-tone",
+  version: "1.0.0",
+  type: "skill",
+  display_name: "Rewrite Tone",
+  description: "Rewrites text in a professional tone.",
+};
+
+const validMcpServer = {
+  name: "@example/fetch-json",
+  version: "1.0.0",
+  type: "mcp-server",
+  schema_version: "2.0",
+  manifest_version: "0.3",
+  display_name: "Fetch JSON",
+  description: "Fetches JSON over HTTP.",
+  author: { name: "AFPS Examples" },
+  server: {
+    type: "node",
+    entry_point: "server/index.js",
+    mcp_config: { command: "node", args: ["server/index.js"] },
+  },
+  tools: [{ name: "fetch", description: "Fetch a URL" }],
+};
+
+const validIntegrationOauth2 = {
+  name: "@example/gmail",
+  version: "1.0.0",
+  type: "integration",
+  schema_version: "2.0",
+  display_name: "Gmail",
+  source: { kind: "local", server: { name: "@example/gmail-server", version: "^1.2.0" } },
+  auths: {
+    oauth: {
+      type: "oauth2",
+      issuer: "https://accounts.google.com",
+      default_scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+      delivery: {
+        http: {
+          in: "header",
+          name: "Authorization",
+          prefix: "Bearer ",
+          value: "{$credential.access_token}",
+        },
+      },
+    },
+  },
+};
+
+const validIntegrationApiKey = {
+  name: "@example/zendesk",
+  version: "1.0.0",
+  type: "integration",
+  schema_version: "2.0",
+  display_name: "Zendesk",
+  source: { kind: "api", api: { upload_protocols: ["tus"] } },
+  auths: {
+    token: {
+      type: "api_key",
+      credentials: {
+        schema: { type: "object", properties: { api_key: { type: "string" } }, required: ["api_key"] },
+      },
+      delivery: {
+        http: {
+          in: "header",
+          name: "Authorization",
+          prefix: "Basic ",
+          value: "{$credential.email}/token:{$credential.api_key}",
+          encoding: "base64",
+        },
+      },
+    },
+  },
+};
+
+// ─────────────────────────────────────────────
+// §2.1 — Package types
+// ─────────────────────────────────────────────
+
+describe("package types (§2.1)", () => {
+  test("the four 2.0 types are valid", () => {
+    expectValid(agentManifestSchema, validAgent);
+    expectValid(skillManifestSchema, validSkill);
+    expectValid(mcpServerManifestSchema, validMcpServer);
+    expectValid(integrationManifestSchema, validIntegrationOauth2);
   });
 
-  test("agent-full", async () => {
-    expectValid(agentManifestSchema, await loadExample("examples/agent-full/manifest.json"));
+  test("packageTypeEnum accepts exactly the four 2.0 types", () => {
+    for (const t of ["agent", "skill", "mcp-server", "integration"]) {
+      expect(packageTypeEnum.safeParse(t).success).toBe(true);
+    }
   });
 
-  test("skill-minimal", async () => {
-    expectValid(skillManifestSchema, await loadExample("examples/skill-minimal/manifest.json"));
+  test("legacy types tool/provider are rejected by packageTypeEnum", () => {
+    expect(packageTypeEnum.safeParse("tool").success).toBe(false);
+    expect(packageTypeEnum.safeParse("provider").success).toBe(false);
   });
 
-  test("tool-minimal", async () => {
-    expectValid(toolManifestSchema, await loadExample("examples/tool-minimal/manifest.json"));
+  test("agent schema rejects type: tool and type: provider", () => {
+    expectInvalid(agentManifestSchema, { ...validAgent, type: "tool" });
+    expectInvalid(agentManifestSchema, { ...validAgent, type: "provider" });
   });
 
-  test("provider-oauth2", async () => {
-    expectValid(providerManifestSchema, await loadExample("examples/provider-oauth2/manifest.json"));
+  test("skill schema rejects type: tool", () => {
+    expectInvalid(skillManifestSchema, { ...validSkill, type: "tool" });
   });
 
-  test("provider-apikey", async () => {
-    expectValid(providerManifestSchema, await loadExample("examples/provider-apikey/manifest.json"));
-  });
-
-  test("provider-basic", async () => {
-    expectValid(providerManifestSchema, await loadExample("examples/provider-basic/manifest.json"));
+  test("integration schema rejects type: provider", () => {
+    expectInvalid(integrationManifestSchema, { ...validIntegrationOauth2, type: "provider" });
   });
 });
 
@@ -128,120 +242,9 @@ describe("versioning (§2.3)", () => {
     expectInvalid(skillManifestSchema, { ...base, version: "1" });
   });
 
-  test("rejects empty version", () => {
+  test("rejects empty / missing version", () => {
     expectInvalid(skillManifestSchema, { ...base, version: "" });
-  });
-
-  test("rejects missing version", () => {
     expectInvalid(skillManifestSchema, { ...base });
-  });
-});
-
-// ─────────────────────────────────────────────
-// §2.1 — Package types
-// ─────────────────────────────────────────────
-
-describe("package types (§2.1)", () => {
-  test("agent type requires agent-specific fields", () => {
-    // Minimal agent — needs schemaVersion, displayName, author
-    expectValid(agentManifestSchema, {
-      name: "@test/agent",
-      version: "1.0.0",
-      type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test Agent",
-      author: "test",
-    });
-
-    // Missing author
-    expectInvalid(agentManifestSchema, {
-      name: "@test/agent",
-      version: "1.0.0",
-      type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test Agent",
-    });
-
-    // Missing displayName
-    expectInvalid(agentManifestSchema, {
-      name: "@test/agent",
-      version: "1.0.0",
-      type: "agent",
-      schemaVersion: "1.0",
-      author: "test",
-    });
-  });
-
-  test("agent author must be non-empty", () => {
-    expectInvalid(agentManifestSchema, {
-      name: "@test/agent",
-      version: "1.0.0",
-      type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test",
-      author: "",
-    });
-  });
-
-  test("agent displayName must be non-empty", () => {
-    expectInvalid(agentManifestSchema, {
-      name: "@test/agent",
-      version: "1.0.0",
-      type: "agent",
-      schemaVersion: "1.0",
-      displayName: "",
-      author: "test",
-    });
-  });
-
-  test("tool type requires entrypoint and tool interface", () => {
-    expectValid(toolManifestSchema, {
-      name: "@test/tool",
-      version: "1.0.0",
-      type: "tool",
-      entrypoint: "tool.ts",
-      tool: { name: "my_tool", description: "Does stuff", inputSchema: {} },
-    });
-
-    // Missing entrypoint
-    expectInvalid(toolManifestSchema, {
-      name: "@test/tool",
-      version: "1.0.0",
-      type: "tool",
-      tool: { name: "my_tool", description: "Does stuff", inputSchema: {} },
-    });
-
-    // Missing tool interface
-    expectInvalid(toolManifestSchema, {
-      name: "@test/tool",
-      version: "1.0.0",
-      type: "tool",
-      entrypoint: "tool.ts",
-    });
-  });
-
-  test("provider type requires definition with authMode", () => {
-    expectValid(providerManifestSchema, {
-      name: "@test/provider",
-      version: "1.0.0",
-      type: "provider",
-      definition: { authMode: "api_key", credentials: { schema: {} } },
-    });
-
-    // Missing definition
-    expectInvalid(providerManifestSchema, {
-      name: "@test/provider",
-      version: "1.0.0",
-      type: "provider",
-    });
-  });
-
-  test("skill type — minimal manifest is valid", () => {
-    expectValid(skillManifestSchema, {
-      name: "@test/skill",
-      version: "1.0.0",
-      type: "skill",
-    });
   });
 });
 
@@ -250,28 +253,133 @@ describe("package types (§2.1)", () => {
 // ─────────────────────────────────────────────
 
 describe("common manifest fields (§3.1)", () => {
-  test("missing name is rejected", () => {
+  test("missing name/version/type rejected", () => {
     expectInvalid(skillManifestSchema, { version: "1.0.0", type: "skill" });
-  });
-
-  test("missing version is rejected", () => {
     expectInvalid(skillManifestSchema, { name: "@test/pkg", type: "skill" });
-  });
-
-  test("missing type is rejected", () => {
     expectInvalid(skillManifestSchema, { name: "@test/pkg", version: "1.0.0" });
   });
 
-  test("optional metadata fields accepted", () => {
+  test("optional snake_case metadata fields accepted", () => {
     expectValid(skillManifestSchema, {
       name: "@test/pkg",
       version: "1.0.0",
       type: "skill",
-      displayName: "My Skill",
+      display_name: "My Skill",
       description: "A useful skill",
       keywords: ["ai", "tool"],
       license: "MIT",
       repository: "https://github.com/test/repo",
+    });
+  });
+
+  test("legacy camelCase fields are NOT standard — they round-trip as extra fields only", () => {
+    // displayName (camelCase) is not the standard field, so the standard
+    // display_name remains absent; the camelCase key is preserved as an extra.
+    const manifest = {
+      name: "@test/pkg",
+      version: "1.0.0",
+      type: "skill",
+      displayName: "Legacy",
+    };
+    const result = skillManifestSchema.safeParse(manifest);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const data = result.data as Record<string, unknown>;
+      expect(data.display_name).toBeUndefined();
+      expect(data.displayName).toBe("Legacy");
+    }
+  });
+});
+
+// ─────────────────────────────────────────────
+// §2.4 / §3.2 — schema_version
+// ─────────────────────────────────────────────
+
+describe("schema_version (§2.4, §3.2)", () => {
+  const agentBase = {
+    name: "@test/agent",
+    version: "1.0.0",
+    type: "agent",
+    display_name: "Test",
+    author: "test",
+  };
+
+  test("valid 2.x schema_version formats for agents", () => {
+    expectValid(agentManifestSchema, { ...agentBase, schema_version: "2.0" });
+    expectValid(agentManifestSchema, { ...agentBase, schema_version: "2.1" });
+    expectValid(agentManifestSchema, { ...agentBase, schema_version: "2.99" });
+  });
+
+  test("schema_version is required for agents", () => {
+    expectInvalid(agentManifestSchema, { ...agentBase });
+  });
+
+  test("schema_version is optional for skills and integrations", () => {
+    expectValid(skillManifestSchema, validSkill);
+    expectValid(skillManifestSchema, { ...validSkill, schema_version: "2.0" });
+    const intNoVer = { ...validIntegrationOauth2 };
+    delete (intNoVer as Record<string, unknown>).schema_version;
+    expectValid(integrationManifestSchema, intNoVer);
+  });
+
+  test("invalid schema_version formats rejected", () => {
+    expectInvalid(agentManifestSchema, { ...agentBase, schema_version: "1.0" }); // wrong major
+    expectInvalid(agentManifestSchema, { ...agentBase, schema_version: "2.0.0" }); // has patch
+    expectInvalid(agentManifestSchema, { ...agentBase, schema_version: "v2.0" }); // prefix
+  });
+
+  test("schema_version format enforced on skills too", () => {
+    expectInvalid(skillManifestSchema, { ...validSkill, schema_version: "2.0.0" });
+    expectInvalid(skillManifestSchema, { ...validSkill, schema_version: "1.0" });
+  });
+});
+
+// ─────────────────────────────────────────────
+// §3.2 — Agent-specific fields
+// ─────────────────────────────────────────────
+
+describe("agent manifest (§3.2)", () => {
+  const base = {
+    name: "@test/agent",
+    version: "1.0.0",
+    type: "agent",
+    schema_version: "2.0",
+    display_name: "Test Agent",
+    author: "test",
+  };
+
+  test("minimal agent valid", () => {
+    expectValid(agentManifestSchema, base);
+  });
+
+  test("author is required and non-empty", () => {
+    const noAuthor = { ...base };
+    delete (noAuthor as Record<string, unknown>).author;
+    expectInvalid(agentManifestSchema, noAuthor);
+    expectInvalid(agentManifestSchema, { ...base, author: "" });
+  });
+
+  test("display_name is required and non-empty", () => {
+    const noName = { ...base };
+    delete (noName as Record<string, unknown>).display_name;
+    expectInvalid(agentManifestSchema, noName);
+    expectInvalid(agentManifestSchema, { ...base, display_name: "" });
+  });
+
+  test("timeout optional, must be positive", () => {
+    expectValid(agentManifestSchema, { ...base, timeout: 300 });
+    expectInvalid(agentManifestSchema, { ...base, timeout: 0 });
+    expectInvalid(agentManifestSchema, { ...base, timeout: -1 });
+  });
+
+  test("integrations_configuration keyed by scoped id", () => {
+    expectValid(agentManifestSchema, {
+      ...base,
+      integrations_configuration: { "@acme/gmail": { scopes: ["a", "b"] } },
+    });
+    expectInvalid(agentManifestSchema, {
+      ...base,
+      integrations_configuration: { "bad-name": { scopes: [] } },
     });
   });
 });
@@ -285,48 +393,48 @@ describe("dependencies (§4)", () => {
     name: "@test/agent",
     version: "1.0.0",
     type: "agent",
-    schemaVersion: "1.0",
-    displayName: "Test",
+    schema_version: "2.0",
+    display_name: "Test",
     author: "test",
   };
 
-  test("valid dependency declarations", () => {
+  test("valid dependency maps (skills/mcp_servers/integrations)", () => {
     expectValid(agentManifestSchema, {
       ...base,
       dependencies: {
         skills: { "@acme/rewrite": "^1.0.0" },
-        tools: { "@acme/fetch": "~2.1.0" },
-        providers: { "@acme/gmail": ">=1.0.0" },
+        mcp_servers: { "@acme/fetch": "~2.1.0" },
+        integrations: { "@acme/gmail": ">=1.0.0" },
       },
     });
   });
 
-  test("empty dependencies is valid", () => {
+  test("empty + partial + wildcard ranges valid", () => {
     expectValid(agentManifestSchema, { ...base, dependencies: {} });
-  });
-
-  test("partial dependency sections", () => {
     expectValid(agentManifestSchema, {
       ...base,
-      dependencies: { providers: { "@acme/gmail": "^1.0.0" } },
+      dependencies: { integrations: { "@acme/gmail": "^1.0.0" } },
     });
-  });
-
-  test("wildcard version range", () => {
     expectValid(agentManifestSchema, {
       ...base,
       dependencies: { skills: { "@acme/skill": "*" } },
     });
   });
 
-  test("dependency keys must be scoped names", () => {
+  test("legacy 1.x dependency sections are not standard maps", () => {
+    // `tools` / `providers` are not 2.0 sections — they round-trip as extras
+    // but their values are NOT validated as semver-range maps.
+    expectValid(agentManifestSchema, {
+      ...base,
+      dependencies: { tools: { "not a scoped name!": "garbage" } },
+    });
+  });
+
+  test("dependency keys must be scoped, values valid ranges", () => {
     expectInvalid(agentManifestSchema, {
       ...base,
       dependencies: { skills: { "bad-name": "^1.0.0" } },
     });
-  });
-
-  test("dependency version must be a valid semver range", () => {
     expectInvalid(agentManifestSchema, {
       ...base,
       dependencies: { skills: { "@acme/skill": "not-a-range!!!" } },
@@ -343,39 +451,30 @@ describe("schema system (§5)", () => {
     name: "@test/agent",
     version: "1.0.0",
     type: "agent",
-    schemaVersion: "1.0",
-    displayName: "Test",
+    schema_version: "2.0",
+    display_name: "Test",
     author: "test",
   };
 
-  test("valid input schema with all field types", () => {
+  test("valid input schema with file_constraints / ui_hints / property_order", () => {
     expectValid(agentManifestSchema, {
       ...base,
       input: {
         schema: {
           type: "object",
           properties: {
-            text: { type: "string", description: "A text field" },
-            count: { type: "number", description: "A number", default: 10 },
-            enabled: { type: "boolean", description: "Toggle" },
-            tags: { type: "array", description: "Tags list" },
-            meta: { type: "object", description: "Metadata" },
+            text: { type: "string" },
             doc: {
               type: "array",
-              description: "Upload",
               items: { type: "string", format: "uri", contentMediaType: "application/octet-stream" },
               maxItems: 5,
             },
           },
           required: ["text"],
         },
-        fileConstraints: {
-          doc: { accept: ".pdf,.docx", maxSize: 10485760 },
-        },
-        uiHints: {
-          text: { placeholder: "Enter..." },
-        },
-        propertyOrder: ["text", "count", "enabled", "tags", "meta", "doc"],
+        file_constraints: { doc: { accept: ".pdf,.docx", max_size: 10485760 } },
+        ui_hints: { text: { placeholder: "Enter..." } },
+        property_order: ["text", "doc"],
       },
     });
   });
@@ -383,834 +482,623 @@ describe("schema system (§5)", () => {
   test("schema container MUST be type: object", () => {
     expectInvalid(agentManifestSchema, {
       ...base,
-      input: {
-        schema: {
-          type: "array",
-          properties: {},
-        },
-      },
+      input: { schema: { type: "array", properties: {} } },
     });
   });
 
-  test("schema properties without type are valid JSON Schema (inferred)", () => {
-    expectValid(agentManifestSchema, {
-      ...base,
-      input: {
-        schema: {
-          type: "object",
-          properties: {
-            field: { description: "no explicit type — valid per JSON Schema 2020-12" },
-          },
-        },
-      },
-    });
+  test("output and config wrappers work identically", () => {
+    const block = { schema: { type: "object", properties: { result: { type: "string" } } } };
+    expectValid(agentManifestSchema, { ...base, output: block });
+    expectValid(agentManifestSchema, { ...base, config: block });
   });
 
-  test("integer type is valid JSON Schema", () => {
-    expectValid(agentManifestSchema, {
-      ...base,
-      input: {
-        schema: {
-          type: "object",
-          properties: {
-            field: { type: "integer" },
-          },
-        },
-      },
-    });
-  });
-
-  test("advanced JSON Schema features are accepted", () => {
-    expectValid(agentManifestSchema, {
-      ...base,
-      input: {
-        schema: {
-          type: "object",
-          properties: {
-            value: {
-              oneOf: [
-                { type: "string" },
-                { type: "number" },
-              ],
-            },
-            nested: {
-              type: "object",
-              properties: {
-                deep: { type: "string", minLength: 1 },
-              },
-              required: ["deep"],
-            },
-          },
-        },
-      },
-    });
-  });
-
-  test("output and config schemas work identically", () => {
-    const schemaBlock = {
-      schema: {
-        type: "object",
-        properties: { result: { type: "string" } },
-      },
-    };
-    expectValid(agentManifestSchema, { ...base, output: schemaBlock });
-    expectValid(agentManifestSchema, { ...base, config: schemaBlock });
-  });
-
-  test("input without schema child is rejected", () => {
+  test("wrapper without schema child is rejected", () => {
     expectInvalid(agentManifestSchema, { ...base, input: {} });
-  });
-
-  test("output without schema child is rejected", () => {
     expectInvalid(agentManifestSchema, { ...base, output: {} });
-  });
-
-  test("config without schema child is rejected", () => {
     expectInvalid(agentManifestSchema, { ...base, config: {} });
   });
 
-  test("format field is preserved on schema properties", () => {
+  test("legacy camelCase wrapper keys are not standard metadata", () => {
+    // fileConstraints/uiHints/propertyOrder are 1.x spellings. The schema
+    // wrapper is a strict object, so these unknown keys are stripped — they
+    // are NOT silently accepted as the snake_case standard fields.
     const manifest = {
       ...base,
       input: {
-        schema: {
-          type: "object",
-          properties: {
-            email: { type: "string", format: "email" },
-          },
-        },
+        schema: { type: "object", properties: { f: { type: "string" } } },
+        fileConstraints: { f: { maxSize: 100 } },
+        uiHints: { f: { placeholder: "x" } },
+        propertyOrder: ["f"],
       },
     };
     const result = agentManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
-      const schema = input.schema as Record<string, unknown>;
-      const props = schema.properties as Record<string, Record<string, unknown>>;
-      expect(props.email.format).toBe("email");
+      // Standard snake_case keys never appear, and the camelCase keys are stripped.
+      expect(input.file_constraints).toBeUndefined();
+      expect(input.property_order).toBeUndefined();
+      expect(input.ui_hints).toBeUndefined();
+      expect(input.fileConstraints).toBeUndefined();
+      expect(input.propertyOrder).toBeUndefined();
     }
-  });
-
-  test("uiHints placeholder is preserved on wrapper", () => {
-    const manifest = {
-      ...base,
-      input: {
-        schema: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-          },
-        },
-        uiHints: {
-          name: { placeholder: "Enter your name..." },
-        },
-      },
-    };
-    const result = agentManifestSchema.safeParse(manifest);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
-      const hints = input.uiHints as Record<string, Record<string, unknown>>;
-      expect(hints.name.placeholder).toBe("Enter your name...");
-    }
-  });
-
-  test("propertyOrder is preserved on wrapper", () => {
-    const manifest = {
-      ...base,
-      input: {
-        schema: {
-          type: "object",
-          properties: {
-            b: { type: "string" },
-            a: { type: "number" },
-          },
-        },
-        propertyOrder: ["a", "b"],
-      },
-    };
-    const result = agentManifestSchema.safeParse(manifest);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      const input = (result.data as Record<string, unknown>).input as Record<string, unknown>;
-      expect(input.propertyOrder).toEqual(["a", "b"]);
-    }
-  });
-
-  test("enum field support", () => {
-    expectValid(agentManifestSchema, {
-      ...base,
-      input: {
-        schema: {
-          type: "object",
-          properties: {
-            priority: { type: "string", enum: ["low", "normal", "high"], default: "normal" },
-          },
-        },
-      },
-    });
   });
 });
 
 // ─────────────────────────────────────────────
-// §6 — Execution model
+// §3.4 — MCP-server manifest
 // ─────────────────────────────────────────────
 
-describe("execution model (§6)", () => {
-  const base = {
-    name: "@test/agent",
-    version: "1.0.0",
-    type: "agent",
-    schemaVersion: "1.0",
-    displayName: "Test",
-    author: "test",
-  };
-
-  test("timeout is optional", () => {
-    expectValid(agentManifestSchema, { ...base });
-    expectValid(agentManifestSchema, { ...base, timeout: 300 });
+describe("mcp-server manifest (§3.4)", () => {
+  test("valid mcp-server with _meta contract", () => {
+    expectValid(mcpServerManifestSchema, validMcpServer);
   });
 
-  test("timeout must be positive", () => {
-    expectInvalid(agentManifestSchema, { ...base, timeout: 0 });
-    expectInvalid(agentManifestSchema, { ...base, timeout: -1 });
+  test("string author is also accepted (MCPB permits both)", () => {
+    expectValid(mcpServerManifestSchema, { ...validMcpServer, author: "Jane Dev" });
   });
-});
 
-// ─────────────────────────────────────────────
-// §7 — Provider authentication
-// ─────────────────────────────────────────────
+  test("MCPB baseline fields required (manifest_version, name, version, server)", () => {
+    for (const k of ["manifest_version", "name", "version", "server"]) {
+      const m = { ...validMcpServer };
+      delete (m as Record<string, unknown>)[k];
+      expectInvalid(mcpServerManifestSchema, m);
+    }
+  });
 
-describe("provider authentication (§7)", () => {
-  const base = { name: "@test/provider", version: "1.0.0", type: "provider" };
-
-  test("all five auth modes accepted", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth2",
-        oauth2: {
-          authorizationUrl: "https://example.com/auth",
-          tokenUrl: "https://example.com/token",
-        },
-      },
+  test("server requires type + entry_point + mcp_config.command", () => {
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      server: { entry_point: "x.js", mcp_config: { command: "node" } },
     });
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth1",
-        oauth1: {
-          requestTokenUrl: "https://example.com/request",
-          accessTokenUrl: "https://example.com/access",
-        },
-      },
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      server: { type: "node", mcp_config: { command: "node" } },
     });
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "api_key", credentials: { schema: {} } },
-    });
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "basic", credentials: { schema: {} } },
-    });
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "custom", credentials: { schema: {} } },
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      server: { type: "node", entry_point: "x.js", mcp_config: {} },
     });
   });
 
-  test("invalid auth mode rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "invalid" },
-    });
-  });
-
-  // §7 — Conditional MUST rules per authMode
-  test("oauth2 — missing authorizationUrl rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "oauth2", oauth2: { tokenUrl: "https://example.com/token" } },
-    });
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "oauth2" },
-    });
-  });
-
-  test("oauth2 — missing tokenUrl rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "oauth2", oauth2: { authorizationUrl: "https://example.com/auth" } },
-    });
-  });
-
-  test("oauth1 — missing requestTokenUrl rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "oauth1", oauth1: { accessTokenUrl: "https://example.com/access" } },
-    });
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "oauth1" },
-    });
-  });
-
-  test("oauth1 — missing accessTokenUrl rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "oauth1", oauth1: { requestTokenUrl: "https://example.com/request" } },
-    });
-  });
-
-  test("api_key — missing credentials rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "api_key" },
-    });
-  });
-
-  test("basic — missing credentials rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "basic" },
-    });
-  });
-
-  test("custom — missing credentials rejected", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "custom" },
-    });
-  });
-
-  // §7 — Optional provider definition fields
-
-  test("oauth2 optional fields accepted", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth2",
-        oauth2: {
-          authorizationUrl: "https://example.com/auth",
-          tokenUrl: "https://example.com/token",
-          refreshUrl: "https://example.com/refresh",
-          defaultScopes: ["read", "write"],
-          scopeSeparator: " ",
-          pkceEnabled: true,
-          tokenAuthMethod: "client_secret_post",
-          authorizationParams: { prompt: "consent" },
-          tokenParams: { grant_type: "authorization_code" },
-        },
-        credentialHeaderName: "Authorization",
-        credentialHeaderPrefix: "Bearer ",
-        authorizedUris: ["https://api.example.com/*"],
-        allowAllUris: false,
-        availableScopes: [{ value: "read", label: "Read access" }],
-      },
-    });
-  });
-
-  // §7.2 — tokenAuthMethod and tokenContentType
-  test("oauth2 tokenAuthMethod accepts both standard values", () => {
-    for (const method of ["client_secret_post", "client_secret_basic"] as const) {
-      expectValid(providerManifestSchema, {
-        ...base,
-        definition: {
-          authMode: "oauth2",
-          oauth2: {
-            authorizationUrl: "https://example.com/auth",
-            tokenUrl: "https://example.com/token",
-            tokenAuthMethod: method,
-          },
-        },
+  test("server.type enum: node/python/binary/uv accepted, others rejected", () => {
+    for (const t of ["node", "python", "binary"]) {
+      expectValid(mcpServerManifestSchema, {
+        ...validMcpServer,
+        server: { ...validMcpServer.server, type: t },
       });
     }
-  });
-
-  test("oauth2 tokenAuthMethod rejects unknown values", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth2",
-        oauth2: {
-          authorizationUrl: "https://example.com/auth",
-          tokenUrl: "https://example.com/token",
-          tokenAuthMethod: "client_secret_jwt",
-        },
-      },
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      server: { ...validMcpServer.server, type: "ruby" },
     });
   });
 
-  test("oauth2 tokenContentType accepts both standard values", () => {
-    for (const ct of ["application/x-www-form-urlencoded", "application/json"] as const) {
-      expectValid(providerManifestSchema, {
-        ...base,
-        definition: {
-          authMode: "oauth2",
-          oauth2: {
-            authorizationUrl: "https://example.com/auth",
-            tokenUrl: "https://example.com/token",
-            tokenContentType: ct,
-          },
+  test("uv server type requires manifest_version 0.4", () => {
+    expectInvalid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      manifest_version: "0.3",
+      server: { ...validMcpServer.server, type: "uv" },
+    });
+    expectValid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      manifest_version: "0.4",
+      server: { ...validMcpServer.server, type: "uv" },
+    });
+  });
+
+  test("name MUST be a scoped name (§2.2)", () => {
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, name: "fetch-json" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, name: "@scope/Name" });
+  });
+
+  test("type MUST be mcp-server", () => {
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, type: "tool" });
+    expectInvalid(mcpServerManifestSchema, { ...validMcpServer, type: "agent" });
+  });
+
+  test("unknown _meta keys do not cause failure (§10)", () => {
+    expectValid(mcpServerManifestSchema, {
+      ...validMcpServer,
+      _meta: {
+        "dev.appstrate/provenance": { source: "git" },
+      },
+    });
+  });
+});
+
+// ─────────────────────────────────────────────
+// §3.5 / §7.1 — Integration source
+// ─────────────────────────────────────────────
+
+describe("integration source (§7.1)", () => {
+  test("local source references an mcp-server by scoped name + range", () => {
+    expectValid(integrationManifestSchema, validIntegrationOauth2);
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "local", server: { name: "@x/y", version: "^1.0.0", vendored: true } },
+    });
+  });
+
+  test("local source rejects unscoped server name / invalid range", () => {
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "local", server: { name: "bad", version: "^1.0.0" } },
+    });
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "local", server: { name: "@x/y", version: "nope!!" } },
+    });
+  });
+
+  test("remote source: url + transport enum", () => {
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "remote", remote: { url: "https://e.com/mcp", transport: "streamable-http" } },
+    });
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "remote", remote: { url: "https://e.com/mcp", transport: "sse" } },
+    });
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "remote", remote: { url: "https://e.com/mcp", transport: "ws" } },
+    });
+  });
+
+  test("api source: upload_protocols open array + uniqueness", () => {
+    expectValid(integrationManifestSchema, validIntegrationApiKey);
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationApiKey,
+      source: { kind: "api", api: {} },
+    });
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationApiKey,
+      source: { kind: "api", api: { upload_protocols: ["s3-multipart", "tus", "ms-resumable"] } },
+    });
+    // Open string array (§7.1): unknown values are accepted; producers SHOULD
+    // use a reverse-DNS qualifier for non-standard protocols.
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationApiKey,
+      source: { kind: "api", api: { upload_protocols: ["com.example/proprietary-resumable"] } },
+    });
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationApiKey,
+      source: { kind: "api", api: { upload_protocols: ["tus", "tus"] } },
+    });
+  });
+
+  test("unknown source kind rejected", () => {
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      source: { kind: "container", server: { name: "@x/y", version: "^1.0.0" } },
+    });
+  });
+
+  test("source is required", () => {
+    const noSource = { ...validIntegrationOauth2 };
+    delete (noSource as Record<string, unknown>).source;
+    expectInvalid(integrationManifestSchema, noSource);
+  });
+});
+
+// ─────────────────────────────────────────────
+// §7.2 – §7.5 — Auth methods & credential schema
+// ─────────────────────────────────────────────
+
+describe("integration auth methods (§7.2 – §7.5)", () => {
+  const base = {
+    name: "@test/integration",
+    version: "1.0.0",
+    type: "integration",
+    schema_version: "2.0",
+    display_name: "Test",
+    source: { kind: "api", api: {} },
+  };
+
+  function withAuth(auths: Record<string, unknown>) {
+    return { ...base, auths };
+  }
+
+  test("auths must have at least one entry", () => {
+    expectInvalid(integrationManifestSchema, withAuth({}));
+    const noAuths = { ...base };
+    delete (noAuths as Record<string, unknown>).auths;
+    expectInvalid(integrationManifestSchema, noAuths);
+  });
+
+  test("auth key must match ^[a-z][a-z0-9_]*$", () => {
+    expectValid(
+      integrationManifestSchema,
+      withAuth({
+        my_oauth2: {
+          type: "oauth2",
+          issuer: "https://e.com",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
         },
-      });
+      }),
+    );
+    expectInvalid(
+      integrationManifestSchema,
+      withAuth({
+        "Bad-Key": {
+          type: "oauth2",
+          issuer: "https://e.com",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+  });
+
+  test("invalid auth type rejected", () => {
+    expectInvalid(
+      integrationManifestSchema,
+      withAuth({ a: { type: "oauth1", delivery: { env: { X: { value: "v" } } } } }),
+    );
+  });
+
+  test("oauth2 requires issuer OR (authorization_endpoint + token_endpoint)", () => {
+    // issuer only — ok
+    expectValid(
+      integrationManifestSchema,
+      withAuth({
+        o: {
+          type: "oauth2",
+          issuer: "https://accounts.google.com",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+    // endpoints only — ok
+    expectValid(
+      integrationManifestSchema,
+      withAuth({
+        o: {
+          type: "oauth2",
+          authorization_endpoint: "https://e.com/auth",
+          token_endpoint: "https://e.com/token",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+    // neither — rejected
+    expectInvalid(
+      integrationManifestSchema,
+      withAuth({
+        o: {
+          type: "oauth2",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+    // only authorization_endpoint (missing token_endpoint) — rejected
+    expectInvalid(
+      integrationManifestSchema,
+      withAuth({
+        o: {
+          type: "oauth2",
+          authorization_endpoint: "https://e.com/auth",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+  });
+
+  test("oauth2 optional fields accepted (token_endpoint_auth_method, pkce, resource, scope_catalog)", () => {
+    expectValid(
+      integrationManifestSchema,
+      withAuth({
+        o: {
+          type: "oauth2",
+          issuer: "https://e.com",
+          token_endpoint_auth_method: "client_secret_basic",
+          code_challenge_methods_supported: ["S256"],
+          resource: "https://api.e.com",
+          authorization_params: { access_type: "offline" },
+          default_scopes: ["read"],
+          scope_catalog: [{ value: "read", label: "Read", description: "Read access", implies: ["r"] }],
+          identity_claims: { account_id: "sub", email: "email" },
+          required_identity_claims: ["sub"],
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+  });
+
+  test("token_endpoint_auth_method enum closed", () => {
+    expectInvalid(
+      integrationManifestSchema,
+      withAuth({
+        o: {
+          type: "oauth2",
+          issuer: "https://e.com",
+          token_endpoint_auth_method: "client_secret_jwt",
+          delivery: { http: { in: "header", name: "Authorization", value: "{$credential.t}" } },
+        },
+      }),
+    );
+  });
+
+  test("api_key/basic/mtls/custom require credentials.schema", () => {
+    for (const type of ["api_key", "basic", "mtls", "custom"]) {
+      // missing credentials → invalid
+      const auth: Record<string, unknown> = {
+        type,
+        delivery: { env: { X: { value: "{$credential.api_key}" } } },
+      };
+      if (type === "custom") {
+        auth.connect = { login: { request: { method: "POST", url: "https://e.com/login" } } };
+      }
+      expectInvalid(integrationManifestSchema, withAuth({ a: auth }));
+
+      // with credentials.schema → valid
+      expectValid(
+        integrationManifestSchema,
+        withAuth({
+          a: {
+            ...auth,
+            credentials: { schema: { type: "object", properties: { api_key: { type: "string" } } } },
+          },
+        }),
+      );
     }
   });
 
-  test("oauth2 tokenContentType rejects unknown values", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth2",
-        oauth2: {
-          authorizationUrl: "https://example.com/auth",
-          tokenUrl: "https://example.com/token",
-          tokenContentType: "text/plain",
+  test("credentials.schema must be a valid object schema", () => {
+    expectInvalid(
+      integrationManifestSchema,
+      withAuth({
+        a: {
+          type: "api_key",
+          credentials: { schema: { type: "array", properties: {} } },
+          delivery: { env: { X: { value: "{$credential.k}" } } },
         },
-      },
-    });
-  });
-
-  // §7.4 — credentialTransform
-  test("api_key credentialTransform accepts base64 with multi-field template", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        credentialTransform: {
-          template: "{{email}}/token:{{api_key}}",
-          encoding: "base64",
-        },
-      },
-    });
-  });
-
-  test("api_key credentialTransform accepts base64 with literal suffix", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        credentialTransform: {
-          template: "{{api_key}}:X",
-          encoding: "base64",
-        },
-      },
-    });
-  });
-
-  test("api_key credentialTransform rejects unknown encoding", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        credentialTransform: {
-          template: "{{api_key}}",
-          encoding: "rot13",
-        },
-      },
-    });
-  });
-
-  test("api_key credentialTransform rejects empty template", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        credentialTransform: {
-          template: "",
-          encoding: "base64",
-        },
-      },
-    });
-  });
-
-  test("api_key credentialTransform rejects missing encoding", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        credentialTransform: {
-          template: "{{api_key}}",
-        },
-      },
-    });
-  });
-
-  test("oauth1 optional fields accepted", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth1",
-        oauth1: {
-          requestTokenUrl: "https://example.com/request",
-          accessTokenUrl: "https://example.com/access",
-          authorizationUrl: "https://example.com/authorize",
-          defaultScopes: [],
-        },
-        credentialHeaderName: "Authorization",
-      },
-    });
-  });
-
-  test("api_key with full credential config accepted", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: {
-          schema: {
-            type: "object",
-            properties: { apiKey: { type: "string" } },
-          },
-          fieldName: "api_key",
-        },
-        credentialHeaderName: "X-API-Key",
-        credentialHeaderPrefix: "",
-        authorizedUris: ["https://api.example.com/v1/*"],
-        allowAllUris: false,
-      },
-    });
-  });
-
-  test("allowAllUris: true accepted", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        allowAllUris: true,
-      },
-    });
-  });
-
-  // §7.7 — uploadProtocols
-  test("uploadProtocols accepts a single known protocol", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth2",
-        oauth2: {
-          authorizationUrl: "https://example.com/auth",
-          tokenUrl: "https://example.com/token",
-        },
-        uploadProtocols: ["google-resumable"],
-      },
-    });
-  });
-
-  test("uploadProtocols accepts multiple known protocols", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "oauth2",
-        oauth2: {
-          authorizationUrl: "https://example.com/auth",
-          tokenUrl: "https://example.com/token",
-        },
-        uploadProtocols: ["s3-multipart", "tus", "ms-resumable"],
-      },
-    });
-  });
-
-  test("uploadProtocols accepts empty array", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        uploadProtocols: [],
-      },
-    });
-  });
-
-  test("uploadProtocols omitted is valid (backwards compatible)", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "api_key", credentials: { schema: {} } },
-    });
-  });
-
-  test("uploadProtocols rejects unknown protocol", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        uploadProtocols: ["fake-protocol"],
-      },
-    });
-  });
-
-  test("uploadProtocols rejects mix of known and unknown", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        uploadProtocols: ["tus", "fake-protocol"],
-      },
-    });
-  });
-
-  test("uploadProtocols rejects duplicate values", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        uploadProtocols: ["tus", "tus"],
-      },
-    });
-  });
-
-  test("uploadProtocols rejects non-array values", () => {
-    expectInvalid(providerManifestSchema, {
-      ...base,
-      definition: {
-        authMode: "api_key",
-        credentials: { schema: {} },
-        uploadProtocols: "google-resumable",
-      },
-    });
-  });
-
-  test("provider presentation fields", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      displayName: "My Provider",
-      description: "A provider",
-      iconUrl: "https://example.com/icon.svg",
-      categories: ["email", "productivity"],
-      docsUrl: "https://example.com/docs",
-      definition: { authMode: "api_key", credentials: { schema: {} } },
-    });
-  });
-
-  test("setupGuide with steps", () => {
-    expectValid(providerManifestSchema, {
-      ...base,
-      definition: { authMode: "api_key", credentials: { schema: {} } },
-      setupGuide: {
-        callbackUrlHint: "Set redirect URI to: {{callbackUrl}}",
-        steps: [
-          { label: "Create app", url: "https://example.com/apps" },
-          { label: "Copy credentials" },
-        ],
-      },
-    });
+      }),
+    );
   });
 });
 
 // ─────────────────────────────────────────────
-// §4.4 — Provider configuration in agents
+// §7.6 — Credential delivery
 // ─────────────────────────────────────────────
 
-describe("providersConfiguration (§4.4)", () => {
+describe("credential delivery (§7.6)", () => {
   const base = {
-    name: "@test/agent",
+    name: "@test/integration",
     version: "1.0.0",
-    type: "agent",
-    schemaVersion: "1.0",
-    displayName: "Test",
-    author: "test",
+    type: "integration",
+    schema_version: "2.0",
+    display_name: "Test",
+    source: { kind: "api", api: {} },
   };
 
-  test("valid provider configuration", () => {
-    expectValid(agentManifestSchema, {
+  function apiKeyAuth(delivery: unknown) {
+    return {
       ...base,
-      dependencies: { providers: { "@acme/gmail": "^1.0.0" } },
-      providersConfiguration: {
-        "@acme/gmail": {
-          scopes: ["gmail.readonly", "gmail.send"],
+      auths: {
+        a: {
+          type: "api_key",
+          credentials: { schema: { type: "object", properties: { k: { type: "string" } } } },
+          delivery,
+        },
+      },
+    };
+  }
+
+  test("http delivery valid", () => {
+    expectValid(
+      integrationManifestSchema,
+      apiKeyAuth({
+        http: { in: "header", name: "Authorization", prefix: "Bearer ", value: "{$credential.k}" },
+      }),
+    );
+  });
+
+  test("http delivery encoding must be base64 when present", () => {
+    expectValid(
+      integrationManifestSchema,
+      apiKeyAuth({ http: { in: "header", name: "Authorization", value: "{$credential.k}", encoding: "base64" } }),
+    );
+    expectInvalid(
+      integrationManifestSchema,
+      apiKeyAuth({ http: { in: "header", name: "Authorization", value: "{$credential.k}", encoding: "hex" } }),
+    );
+  });
+
+  test("http.in enum closed", () => {
+    for (const loc of ["header", "query", "cookie"]) {
+      expectValid(integrationManifestSchema, apiKeyAuth({ http: { in: loc, name: "X", value: "{$credential.k}" } }));
+    }
+    expectInvalid(integrationManifestSchema, apiKeyAuth({ http: { in: "body", name: "X", value: "{$credential.k}" } }));
+  });
+
+  test("env delivery valid; files mode must be octal", () => {
+    expectValid(integrationManifestSchema, apiKeyAuth({ env: { GMAIL_TOKEN: { value: "{$credential.k}", sensitive: true } } }));
+    expectValid(integrationManifestSchema, apiKeyAuth({ files: { "/run/creds/token": { value: "{$credential.k}", mode: "0400" } } }));
+    expectInvalid(integrationManifestSchema, apiKeyAuth({ files: { "/run/creds/token": { value: "{$credential.k}", mode: "999" } } }));
+  });
+
+  test("delivery requires at least one channel", () => {
+    expectInvalid(integrationManifestSchema, apiKeyAuth({}));
+  });
+
+  test("http is mutually exclusive with env/files", () => {
+    expectInvalid(
+      integrationManifestSchema,
+      apiKeyAuth({
+        http: { in: "header", name: "Authorization", value: "{$credential.k}" },
+        env: { X: { value: "{$credential.k}" } },
+      }),
+    );
+    expectInvalid(
+      integrationManifestSchema,
+      apiKeyAuth({
+        http: { in: "header", name: "Authorization", value: "{$credential.k}" },
+        files: { "/x": { value: "{$credential.k}" } },
+      }),
+    );
+    // env + files together (no http) is allowed
+    expectValid(
+      integrationManifestSchema,
+      apiKeyAuth({ env: { X: { value: "{$credential.k}" } }, files: { "/x": { value: "{$credential.k}" } } }),
+    );
+  });
+});
+
+// ─────────────────────────────────────────────
+// §7.7 — connect (custom only, exactly one of login/tool)
+// ─────────────────────────────────────────────
+
+describe("connect (§7.7)", () => {
+  const base = {
+    name: "@test/integration",
+    version: "1.0.0",
+    type: "integration",
+    schema_version: "2.0",
+    display_name: "Test",
+    source: { kind: "api", api: {} },
+  };
+
+  const credsSchema = { type: "object", properties: { username: { type: "string" } } };
+
+  test("custom auth with connect.login is valid", () => {
+    expectValid(integrationManifestSchema, {
+      ...base,
+      auths: {
+        c: {
+          type: "custom",
+          credentials: { schema: credsSchema },
+          connect: {
+            login: {
+              request: { method: "POST", url: "https://api.e.com/login", content_type: "application/json" },
+              success_criteria: [{ condition: "$statusCode == 200" }],
+              outputs: {
+                token: "$response.body#/access_token",
+                csrf: { from: "cookie", name: "XSRF-TOKEN" },
+                sub: { from: "jwt", token: "{$outputs.token}", path: "/sub" },
+              },
+              expires_in_output: "exp",
+              identity_outputs: ["sub"],
+            },
+            limits: { request_timeout_ms: 30000, max_response_bytes: 5000000 },
+          },
+          delivery: { env: { TOKEN: { value: "{$outputs.token}", sensitive: true } } },
         },
       },
     });
   });
 
+  test("connect is rejected on non-custom auth types", () => {
+    expectInvalid(integrationManifestSchema, {
+      ...base,
+      auths: {
+        a: {
+          type: "api_key",
+          credentials: { schema: credsSchema },
+          connect: { login: { request: { method: "POST", url: "https://e.com" } } },
+          delivery: { env: { X: { value: "{$credential.k}" } } },
+        },
+      },
+    });
+  });
+
+  test("connect must contain exactly one of login/tool", () => {
+    // neither
+    expectInvalid(integrationManifestSchema, {
+      ...base,
+      auths: {
+        c: {
+          type: "custom",
+          credentials: { schema: credsSchema },
+          connect: { limits: {} },
+          delivery: { env: { X: { value: "{$credential.k}" } } },
+        },
+      },
+    });
+    // both
+    expectInvalid(integrationManifestSchema, {
+      ...base,
+      auths: {
+        c: {
+          type: "custom",
+          credentials: { schema: credsSchema },
+          connect: { login: { request: { method: "POST", url: "https://e.com" } }, tool: {} },
+          delivery: { env: { X: { value: "{$credential.k}" } } },
+        },
+      },
+    });
+  });
 });
 
 // ─────────────────────────────────────────────
-// §10 — Extensibility (x- prefix preservation)
+// §7.8 – §7.10 — tools metadata, uri restrictions, setup_guide
 // ─────────────────────────────────────────────
 
-describe("extensibility (§10)", () => {
+describe("integration tools/uris/setup_guide (§7.8 – §7.10)", () => {
+  test("per-tool metadata, uri restrictions, setup_guide accepted", () => {
+    expectValid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      auths: {
+        oauth: {
+          ...validIntegrationOauth2.auths.oauth,
+          authorized_uris: ["https://api.example.com/**"],
+          allow_all_uris: false,
+        },
+      },
+      tools_policy: {
+        list_issues: {
+          required_scopes: ["repo"],
+          required_auth_key: "oauth",
+          url_patterns: [{ pattern: "https://api.github.com/**", methods: ["GET"] }],
+        },
+      },
+      icon: "icon.png",
+      setup_guide: {
+        callback_url_hint: "Set redirect URI to: {{callback_url}}",
+        steps: [{ label: "Create app", url: "https://e.com/apps" }, { label: "Copy credentials" }],
+      },
+    });
+  });
+
+  test("setup_guide step requires a label", () => {
+    expectInvalid(integrationManifestSchema, {
+      ...validIntegrationOauth2,
+      setup_guide: { steps: [{ url: "https://e.com" }] },
+    });
+  });
+});
+
+// ─────────────────────────────────────────────
+// §10 — Extensibility (_meta)
+// ─────────────────────────────────────────────
+
+describe("extensibility — _meta (§10)", () => {
+  test("_meta with reverse-DNS keys preserved on agent", () => {
+    const manifest = {
+      ...validAgent,
+      _meta: {
+        "dev.afps/policy": { tier: "high" },
+        "dev.appstrate/cost-center": { team: "eng" },
+      },
+    };
+    const result = agentManifestSchema.safeParse(manifest);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const meta = (result.data as Record<string, unknown>)._meta as Record<string, unknown>;
+      expect(meta["dev.afps/policy"]).toEqual({ tier: "high" });
+    }
+  });
+
+  test("_meta values must be objects", () => {
+    expectInvalid(agentManifestSchema, { ...validAgent, _meta: { "dev.afps/x": "string-not-object" } });
+  });
+
   test("unknown top-level fields are preserved (looseObject)", () => {
-    const manifest = {
-      name: "@test/skill",
-      version: "1.0.0",
-      type: "skill",
-      "x-custom": "preserved",
-      "x-vendor-field": { nested: true },
-    };
+    const manifest = { ...validSkill, "x-custom": "preserved" };
     const result = skillManifestSchema.safeParse(manifest);
     expect(result.success).toBe(true);
     if (result.success) {
       expect((result.data as Record<string, unknown>)["x-custom"]).toBe("preserved");
-      expect((result.data as Record<string, unknown>)["x-vendor-field"]).toEqual({ nested: true });
     }
-  });
-
-  test("unknown fields in dependencies are preserved", () => {
-    const manifest = {
-      name: "@test/agent",
-      version: "1.0.0",
-      type: "agent",
-      schemaVersion: "1.0",
-      displayName: "Test",
-      author: "test",
-      dependencies: {
-        providers: { "@acme/gmail": "^1.0.0" },
-        "x-custom-deps": "preserved",
-      },
-    };
-    const result = agentManifestSchema.safeParse(manifest);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      const deps = (result.data as Record<string, unknown>).dependencies as Record<string, unknown>;
-      expect(deps["x-custom-deps"]).toBe("preserved");
-    }
-  });
-});
-
-// ─────────────────────────────────────────────
-// §3.2 — Agent schemaVersion format
-// ─────────────────────────────────────────────
-
-describe("schemaVersion (§3.2)", () => {
-  const base = {
-    name: "@test/agent",
-    version: "1.0.0",
-    type: "agent",
-    displayName: "Test",
-    author: "test",
-  };
-
-  test("valid schemaVersion formats", () => {
-    expectValid(agentManifestSchema, { ...base, schemaVersion: "1.0" });
-    expectValid(agentManifestSchema, { ...base, schemaVersion: "1.1" });
-    expectValid(agentManifestSchema, { ...base, schemaVersion: "1.99" });
-  });
-
-  test("schemaVersion is required for agents", () => {
-    expectInvalid(agentManifestSchema, { ...base });
-  });
-
-  test("schemaVersion is optional for skills", () => {
-    expectValid(skillManifestSchema, { name: "@test/skill", version: "1.0.0", type: "skill" });
-    expectValid(skillManifestSchema, {
-      name: "@test/skill",
-      version: "1.0.0",
-      type: "skill",
-      schemaVersion: "1.0",
-    });
-  });
-
-  test("schemaVersion is optional for tools", () => {
-    const toolBase = {
-      name: "@test/tool",
-      version: "1.0.0",
-      type: "tool",
-      entrypoint: "tool.ts",
-      tool: { name: "t", description: "D", inputSchema: {} },
-    };
-    expectValid(toolManifestSchema, toolBase);
-    expectValid(toolManifestSchema, { ...toolBase, schemaVersion: "1.0" });
-  });
-
-  test("schemaVersion is optional for providers", () => {
-    const provBase = {
-      name: "@test/prov",
-      version: "1.0.0",
-      type: "provider",
-      definition: { authMode: "api_key", credentials: { schema: {} } },
-    };
-    expectValid(providerManifestSchema, provBase);
-    expectValid(providerManifestSchema, { ...provBase, schemaVersion: "1.0" });
-  });
-
-  test("schemaVersion format enforced on non-agent types", () => {
-    expectInvalid(skillManifestSchema, {
-      name: "@test/skill",
-      version: "1.0.0",
-      type: "skill",
-      schemaVersion: "1.0.0",
-    });
-    expectInvalid(skillManifestSchema, {
-      name: "@test/skill",
-      version: "1.0.0",
-      type: "skill",
-      schemaVersion: "2.0",
-    });
-  });
-
-  test("invalid schemaVersion formats rejected", () => {
-    expectInvalid(agentManifestSchema, { ...base, schemaVersion: "2.0" }); // wrong major
-    expectInvalid(agentManifestSchema, { ...base, schemaVersion: "1.0.0" }); // has patch
-    expectInvalid(agentManifestSchema, { ...base, schemaVersion: "v1.0" }); // has prefix
-  });
-});
-
-// ─────────────────────────────────────────────
-// §3.4 — Tool interface
-// ─────────────────────────────────────────────
-
-describe("tool interface (§3.4)", () => {
-  const base = { name: "@test/tool", version: "1.0.0", type: "tool", entrypoint: "tool.ts" };
-
-  test("tool name must be non-empty", () => {
-    expectInvalid(toolManifestSchema, {
-      ...base,
-      tool: { name: "", description: "Desc", inputSchema: {} },
-    });
-  });
-
-  test("tool description must be non-empty", () => {
-    expectInvalid(toolManifestSchema, {
-      ...base,
-      tool: { name: "my_tool", description: "", inputSchema: {} },
-    });
-  });
-
-  test("tool entrypoint must be non-empty", () => {
-    expectInvalid(toolManifestSchema, {
-      ...base,
-      entrypoint: "",
-      tool: { name: "my_tool", description: "Desc", inputSchema: {} },
-    });
-  });
-});
-
-// ─────────────────────────────────────────────
-// §3.4 — Tool entrypoint points to the loadable artifact
-// ─────────────────────────────────────────────
-
-describe("tool entrypoint — distribution semantics (§3.4)", () => {
-  const base = {
-    name: "@test/tool",
-    version: "1.0.0",
-    type: "tool",
-    tool: { name: "my_tool", description: "Desc", inputSchema: {} },
-  };
-
-  test("entrypoint pointing to a compiled bundle is valid", () => {
-    expectValid(toolManifestSchema, { ...base, entrypoint: "tool.js" });
-  });
-
-  test("entrypoint pointing to a source file is valid (draft/authoring)", () => {
-    expectValid(toolManifestSchema, { ...base, entrypoint: "src/index.ts" });
-  });
-
-  test("schemaVersion 1.1 accepted", () => {
-    expectValid(toolManifestSchema, {
-      ...base,
-      entrypoint: "tool.js",
-      schemaVersion: "1.1",
-    });
   });
 });

@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://afps.appstrate.dev/packages/schema/v1/agent.schema.json",
+  "$id": "https://afps.appstrate.dev/packages/schema/v2/agent.schema.json",
   "$comment": "SPDX-License-Identifier: CC-BY-4.0 — Copyright (c) 2026 Appstrate contributors",
   "title": "AFPS Agent Manifest",
-  "description": "Manifest schema for AFPS agent packages. An agent declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
+  "description": "Manifest schema for AFPS 2.0 agent packages. An agent declares dependencies, input/output/config schemas, a timeout hint, and per-integration configuration.",
   "type": "object",
   "properties": {
     "name": {
@@ -17,11 +17,14 @@
       "type": "string",
       "const": "agent"
     },
-    "displayName": {
+    "display_name": {
       "type": "string",
       "minLength": 1
     },
     "description": {
+      "type": "string"
+    },
+    "long_description": {
       "type": "string"
     },
     "keywords": {
@@ -33,12 +36,152 @@
     "license": {
       "type": "string"
     },
+    "author": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": {}
+        }
+      ]
+    },
     "repository": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "directory": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "url"
+          ],
+          "additionalProperties": {}
+        }
+      ]
+    },
+    "homepage": {
       "type": "string"
     },
-    "schemaVersion": {
+    "documentation": {
+      "type": "string"
+    },
+    "support": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "icons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size": {
+            "type": "string",
+            "pattern": "^\\d+x\\d+$"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark",
+              "high-contrast"
+            ]
+          }
+        },
+        "required": [
+          "src"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "privacy_policies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "darwin",
+              "win32",
+              "linux"
+            ]
+          }
+        },
+        "runtimes": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "clients": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": {}
+    },
+    "schema_version": {
       "type": "string",
-      "pattern": "^1\\.(0|[1-9]\\d*)$"
+      "pattern": "^2\\.(0|[1-9]\\d*)$"
     },
     "dependencies": {
       "type": "object",
@@ -50,37 +193,104 @@
             "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
           },
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": {}
+              }
+            ]
           }
         },
-        "tools": {
+        "mcp_servers": {
           "type": "object",
           "propertyNames": {
             "type": "string",
             "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
           },
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": {}
+              }
+            ]
           }
         },
-        "providers": {
+        "integrations": {
           "type": "object",
           "propertyNames": {
             "type": "string",
             "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?\\/[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
           },
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "auth_key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": {}
+              }
+            ]
           }
         }
       },
       "additionalProperties": {}
     },
-    "author": {
-      "type": "string",
-      "minLength": 1
+    "_meta": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      }
     },
-    "providersConfiguration": {
+    "integrations_configuration": {
       "type": "object",
       "propertyNames": {
         "type": "string",
@@ -94,6 +304,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "auth_key": {
+            "type": "string"
           }
         },
         "additionalProperties": {}
@@ -121,7 +334,7 @@
             }
           ]
         },
-        "fileConstraints": {
+        "file_constraints": {
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -132,7 +345,7 @@
               "accept": {
                 "type": "string"
               },
-              "maxSize": {
+              "max_size": {
                 "type": "number",
                 "exclusiveMinimum": 0
               }
@@ -140,7 +353,7 @@
             "additionalProperties": {}
           }
         },
-        "uiHints": {
+        "ui_hints": {
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -155,7 +368,7 @@
             "additionalProperties": {}
           }
         },
-        "propertyOrder": {
+        "property_order": {
           "type": "array",
           "items": {
             "type": "string"
@@ -189,7 +402,7 @@
             }
           ]
         },
-        "fileConstraints": {
+        "file_constraints": {
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -200,7 +413,7 @@
               "accept": {
                 "type": "string"
               },
-              "maxSize": {
+              "max_size": {
                 "type": "number",
                 "exclusiveMinimum": 0
               }
@@ -208,7 +421,7 @@
             "additionalProperties": {}
           }
         },
-        "uiHints": {
+        "ui_hints": {
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -223,7 +436,7 @@
             "additionalProperties": {}
           }
         },
-        "propertyOrder": {
+        "property_order": {
           "type": "array",
           "items": {
             "type": "string"
@@ -257,7 +470,7 @@
             }
           ]
         },
-        "fileConstraints": {
+        "file_constraints": {
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -268,7 +481,7 @@
               "accept": {
                 "type": "string"
               },
-              "maxSize": {
+              "max_size": {
                 "type": "number",
                 "exclusiveMinimum": 0
               }
@@ -276,7 +489,7 @@
             "additionalProperties": {}
           }
         },
-        "uiHints": {
+        "ui_hints": {
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -291,7 +504,7 @@
             "additionalProperties": {}
           }
         },
-        "propertyOrder": {
+        "property_order": {
           "type": "array",
           "items": {
             "type": "string"
@@ -312,9 +525,9 @@
     "name",
     "version",
     "type",
-    "displayName",
-    "schemaVersion",
-    "author"
+    "display_name",
+    "author",
+    "schema_version"
   ],
   "additionalProperties": {}
 }

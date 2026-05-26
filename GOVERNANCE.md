@@ -19,7 +19,7 @@ Editorial clarifications that do not change interoperability MAY use a shorter p
 
 ## Breaking Changes
 
-Any incompatible change to manifest meaning, validation rules, archive layout, or field semantics MUST increment the major `schemaVersion`.
+Any incompatible change to manifest meaning, validation rules, archive layout, or field semantics MUST increment the major `schema_version`.
 Non-breaking clarifications, additive fields, and interoperability notes SHOULD use a minor specification revision.
 
 ## Contributions

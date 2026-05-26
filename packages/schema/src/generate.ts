@@ -16,48 +16,53 @@ import { resolve, dirname } from "node:path";
 import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { createSchemas, afpsJsonSchemaOverride } from "./schemas.ts";
 
-const MAJOR = 1;
+const MAJOR = 2;
 const VERSION_TAG = `v${MAJOR}`;
 const BASE_URL = "https://afps.appstrate.dev/packages/schema";
 const OUTPUT_DIR = resolve(dirname(import.meta.filename!), "..", VERSION_TAG);
 
 const isCheck = process.argv.includes("--check");
 
-const { agentManifestSchema, skillManifestSchema, toolManifestSchema, providerManifestSchema } =
-  createSchemas(MAJOR);
+const {
+  agentManifestSchema,
+  skillManifestSchema,
+  mcpServerManifestSchema,
+  integrationManifestSchema,
+} = createSchemas(MAJOR);
 
 const entries = [
   {
     filename: "agent.schema.json",
     title: "AFPS Agent Manifest",
     description:
-      "Manifest schema for AFPS agent packages. " +
-      "An agent declares dependencies, input/output/config schemas, a timeout hint, and provider configuration.",
+      "Manifest schema for AFPS 2.0 agent packages. " +
+      "An agent declares dependencies, input/output/config schemas, a timeout hint, and per-integration configuration.",
     schema: agentManifestSchema,
   },
   {
     filename: "skill.schema.json",
     title: "AFPS Skill Manifest",
     description:
-      "Manifest schema for AFPS skill packages. " +
-      "A skill is a reusable prompt with optional frontmatter metadata.",
+      "Manifest schema for AFPS 2.0 skill packages. " +
+      "A skill is a superset of the Agent Skills format with package identity and versioning.",
     schema: skillManifestSchema,
   },
   {
-    filename: "tool.schema.json",
-    title: "AFPS Tool Manifest",
+    filename: "mcp-server.schema.json",
+    title: "AFPS MCP-Server Manifest",
     description:
-      "Manifest schema for AFPS tool packages. " +
-      "A tool declares a single callable capability with its interface and implementation source.",
-    schema: toolManifestSchema,
+      "Manifest schema for AFPS 2.0 mcp-server packages. " +
+      "The manifest is an MCP Bundle (MCPB) manifest; the MCPB schema is authoritative for top-level fields " +
+      'and the AFPS identity contract lives under _meta["dev.afps/mcp-server"].',
+    schema: mcpServerManifestSchema,
   },
   {
-    filename: "provider.schema.json",
-    title: "AFPS Provider Manifest",
+    filename: "integration.schema.json",
+    title: "AFPS Integration Manifest",
     description:
-      "Manifest schema for AFPS provider packages. " +
-      "A provider declares auth mode, OAuth endpoints, credential schema, and setup guide.",
-    schema: providerManifestSchema,
+      "Manifest schema for AFPS 2.0 integration packages. " +
+      "An integration declares a capability source, one or more authentication methods, and credential delivery.",
+    schema: integrationManifestSchema,
   },
 ];
 
