@@ -109,9 +109,6 @@ default value corrected to match the upstream RFC, one additive auth type.
 - `refineAuthMethod` now requires `credentials.schema` for `mtls`.
 - Conformance test renamed and extended to cover `mtls`.
 
-[RFC 7591]: https://datatracker.ietf.org/doc/html/rfc7591
-[RFC 8414]: https://datatracker.ietf.org/doc/html/rfc8414
-
 ---
 
 ## v2.0.0 — 2026-05-24
