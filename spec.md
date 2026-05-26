@@ -329,6 +329,14 @@ All manifests are JSON objects. For `agent`, `skill`, and `integration` manifest
 - **Example**: `Collects inbound requests and produces a structured summary.`
 - **Default**: none
 
+#### `long_description`
+- **Type**: string
+- **Required**: MAY
+- **Format**: Markdown
+- **Description**: Detailed long-form description of the package, intended for catalog listings. Aligned with the MCPB `long_description` field.
+- **Example**: `Collects inbound support requests, normalizes them, and produces a structured triage summary.`
+- **Default**: none
+
 #### `keywords`
 - **Type**: array of strings
 - **Required**: MAY
@@ -340,18 +348,89 @@ All manifests are JSON objects. For `agent`, `skill`, and `integration` manifest
 #### `license`
 - **Type**: string
 - **Required**: MAY
-- **Format**: free text or SPDX-like identifier
+- **Format**: SPDX identifier RECOMMENDED ([SPDX]); free text accepted
 - **Description**: Declares package licensing metadata.
 - **Example**: `MIT`
 - **Default**: none
 
+#### `author`
+- **Type**: `Author` — either a string (compact form) or an object
+- **Required**: MUST for `agent`; MAY for `skill`, `mcp-server`, `integration`
+- **Format**: `string` (free text), or `object` with `name` (REQUIRED), `email` (OPTIONAL), `url` (OPTIONAL). The object form is aligned with the MCPB `author` field and the npm `author` field.
+- **Description**: Human author or publishing identity.
+- **Example (string)**: `"AFPS Examples"`
+- **Example (object)**: `{ "name": "AFPS Examples", "email": "team@example.com", "url": "https://example.com" }`
+- **Default**: none
+- **Note**: When a producer emits the string form, consumers SHOULD treat it as equivalent to `{ "name": "<string>" }`.
+
 #### `repository`
+- **Type**: `Repository` — either a string (compact form) or an object
+- **Required**: MAY
+- **Format**: `string` URI (when the repository can be unambiguously identified by a URL), or `object` with `type` (REQUIRED, e.g. `"git"`), `url` (REQUIRED, URI), and `directory` (OPTIONAL, path within the repository). The object form is aligned with the MCPB `repository` field and the npm `repository` field.
+- **Description**: Source repository or project home.
+- **Example (string)**: `"https://example.com/afps/customer-intake"`
+- **Example (object)**: `{ "type": "git", "url": "https://github.com/example/intake.git", "directory": "packages/intake" }`
+- **Default**: none
+
+#### `homepage`
+- **Type**: string (URI)
+- **Required**: MAY
+- **Description**: Package homepage. Aligned with the MCPB `homepage` field and the npm `homepage` field.
+- **Example**: `https://example.com/products/customer-intake`
+- **Default**: none
+
+#### `documentation`
+- **Type**: string (URI)
+- **Required**: MAY
+- **Description**: Documentation URL for the package. Aligned with the MCPB `documentation` field.
+- **Example**: `https://docs.example.com/customer-intake`
+- **Default**: none
+
+#### `support`
+- **Type**: string (URI)
+- **Required**: MAY
+- **Description**: Support or issue-tracker URL. Aligned with the MCPB `support` field (analogous to npm `bugs.url`).
+- **Example**: `https://github.com/example/intake/issues`
+- **Default**: none
+
+#### `icon`
 - **Type**: string
 - **Required**: MAY
-- **Format**: free text; URI recommended
-- **Description**: Source repository or project home.
-- **Example**: `https://example.com/afps/customer-intake`
+- **Format**: relative archive path to a PNG image, or an absolute URI
+- **Description**: Single-icon presentation hint. Aligned with the MCPB `icon` field.
+- **Example**: `assets/icon.png`
 - **Default**: none
+
+#### `icons`
+- **Type**: array of `Icon` objects
+- **Required**: MAY
+- **Format**: each entry is `{ src (REQUIRED, archive path or URI), size (OPTIONAL, "WIDTHxHEIGHT"), theme (OPTIONAL, one of `light`, `dark`, `high-contrast`) }`. Aligned with the MCPB `icons` field. When both `icon` and `icons` are present, `icons` is authoritative.
+- **Example**: `[{ "src": "assets/icon-128.png", "size": "128x128" }, { "src": "assets/icon-dark.png", "theme": "dark" }]`
+- **Default**: none
+
+#### `screenshots`
+- **Type**: array of strings
+- **Required**: MAY
+- **Format**: each entry is a relative archive path to an image or an absolute URI.
+- **Description**: Screenshot images for catalog listings. Aligned with the MCPB `screenshots` field.
+- **Example**: `["assets/screenshot-1.png"]`
+- **Default**: none
+
+#### `privacy_policies`
+- **Type**: array of strings (URIs)
+- **Required**: MAY
+- **Description**: Privacy-policy URLs for external services the package interacts with. Aligned with the MCPB `privacy_policies` field.
+- **Example**: `["https://example.com/privacy"]`
+- **Default**: none
+
+#### `compatibility`
+- **Type**: object
+- **Required**: MAY
+- **Format**: object with OPTIONAL `platforms` (array of `darwin`/`win32`/`linux`), OPTIONAL `runtimes` (map of runtime name → semver range, e.g. `{ "node": ">=18.0.0", "python": ">=3.10" }`), and OPTIONAL `clients` (map of client identifier → semver range, e.g. `{ "claude_desktop": ">=1.0.0" }`). Aligned with the MCPB `compatibility` field.
+- **Description**: Declares environment requirements for the package.
+- **Example**: `{ "platforms": ["darwin", "linux"], "runtimes": { "node": ">=18.0.0" } }`
+- **Default**: none
+- **Note (skill)**: an Agent Skills `SKILL.md` frontmatter `compatibility` (a free-text string, see §3.3) is preserved for upstream compatibility but is non-authoritative when the manifest declares the structured `compatibility` object.
 
 #### `schema_version`
 - **Type**: string
@@ -371,23 +450,7 @@ All manifests are JSON objects. For `agent`, `skill`, and `integration` manifest
 
 ### 3.2 Agent Manifest
 
-Agent manifests extend the common fields above. A conforming agent manifest MUST include `schema_version`, `display_name`, and `author`. Integrations listed in `integrations_configuration` SHOULD also be declared in `dependencies.integrations`.
-
-#### `author`
-- **Type**: string
-- **Required**: MUST for `agent`
-- **Format**: free text
-- **Description**: Human author or publishing identity for the agent.
-- **Example**: `AFPS Examples`
-- **Default**: none
-
-#### `integrations_configuration`
-- **Type**: object
-- **Required**: MAY
-- **Format**: map keyed by integration package id
-- **Description**: Per-integration runtime configuration such as requested scopes.
-- **Example**: `{ "@example/gmail": { "scopes": ["https://www.googleapis.com/auth/gmail.readonly"] } }`
-- **Default**: none
+Agent manifests extend the common fields above. A conforming agent manifest MUST include `schema_version`, `display_name`, and `author` (§3.1). Per-integration runtime configuration (such as requested OAuth scopes) is declared inside the dependency entry under `dependencies.integrations` (§4.1) using the object form.
 
 #### `input`
 - **Type**: object
@@ -532,12 +595,7 @@ An integration manifest uses the common fields (§3.1): `name` (scoped), `versio
 - **Example**: `{ "oauth": { "type": "oauth2", "issuer": "https://accounts.google.com", "delivery": { "http": { "in": "header", "name": "Authorization", "prefix": "Bearer ", "value": "{$credential.access_token}" } } } }`
 - **Default**: none
 
-#### `icon`
-- **Type**: string
-- **Required**: MAY
-- **Format**: relative archive path to a PNG, or a URI
-- **Description**: Presentation icon for the integration.
-- **Default**: none
+> The integration manifest uses the common-fields `icon` / `icons` (§3.1) for presentation; the legacy integration-scoped `icon` field is folded into the common fields and is no longer documented separately here.
 
 #### `INTEGRATION.md`
 - **Required**: MAY
@@ -553,14 +611,37 @@ A package declares its dependencies using the `dependencies` field. The field co
 ```json
 {
   "dependencies": {
-    "integrations": { "@acme/gmail": "^1.0.0" },
+    "integrations": {
+      "@acme/gmail": {
+        "version": "^1.0.0",
+        "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]
+      }
+    },
     "skills": { "@acme/rewrite-tone": "^1.0.0" },
     "mcp_servers": { "@acme/fetch-json": "^1.0.0" }
   }
 }
 ```
 
-Each map entry is an AFPS package identity (§2.2) paired with a semver version range. Dependency keys MUST be valid scoped names matching the pattern defined in §2.2. All package types MAY declare dependencies.
+Each map entry is an AFPS package identity (§2.2) paired with a **dependency value**. Dependency keys MUST be valid scoped names matching the pattern defined in §2.2. All package types MAY declare dependencies.
+
+A dependency value takes one of two shapes:
+
+- **string form**: a valid semver range (e.g. `"^1.0.0"`). Equivalent to the object form `{ "version": "<string>" }`.
+- **object form**: an object whose `version` member MUST be a valid semver range, plus any number of dependency-type-specific OPTIONAL fields documented below.
+
+Consumers MUST accept both forms and normalize the string form to `{ "version": "<string>" }` before processing.
+
+#### Per-dependency-type fields
+
+For `dependencies.integrations.<id>` (object form), AFPS v2.0 defines the following OPTIONAL fields:
+
+- `scopes` (array of strings) — the OAuth scopes the depending package requests from this integration. Consumers compute the effective requested scope set as the union of `scopes` across the package's configured integrations (§7.4).
+- `auth_key` (string) — selects an `auths.<key>` entry when the referenced integration declares more than one auth method. When omitted, consumers select the integration's sole auth method, or apply consumer-defined policy when multiple exist.
+
+For `dependencies.skills.<id>` and `dependencies.mcp_servers.<id>`, AFPS v2.0 defines no extra fields beyond `version`. Producers MAY add fields under `_meta` within the object form (§10).
+
+> **Migration note.** AFPS earlier drafts declared per-integration configuration under a sibling agent-level field `integrations_configuration` (`{ scopes }`). That field is **deprecated** in AFPS 2.0 in favor of the object dependency form above. Consumers MUST keep accepting an agent-level `integrations_configuration` map for backward compatibility and MUST merge it into the dependency entries (a sibling `scopes` always wins over the deprecated map).
 
 The following diagram illustrates how an agent composes its dependencies:
 
@@ -583,17 +664,17 @@ The following diagram illustrates how an agent composes its dependencies:
 
 ### 4.2 Version Range Resolution
 
-Dependency values MUST be valid semver ranges (e.g., `^1.0.0`, `~2.1`, `>=3.0.0`, `*`). Consumers MUST reject invalid semver range syntax. How consumers resolve ranges against a package catalog is an implementation concern.
+A dependency entry's `version` (in the object form, or the entry value itself in the string form) MUST be a valid semver range (e.g., `^1.0.0`, `~2.1`, `>=3.0.0`, `*`). Consumers MUST reject invalid semver range syntax. How consumers resolve ranges against a package catalog is an implementation concern.
 
 ### 4.3 Circular Dependencies
 
 A package MUST NOT declare a dependency on itself. Consumers SHOULD detect circular dependencies in the transitive dependency graph and report them with a concrete cycle path.
 
-### 4.4 Integration Configuration
+### 4.4 Integration Configuration (Deprecated)
 
-`integrations_configuration` is keyed by integration package id. The interoperable keys defined in AFPS v2.0 are:
+The sibling `integrations_configuration` map keyed by integration package id is **deprecated** in AFPS 2.0. Per-integration configuration (such as requested OAuth scopes or auth-method selection) is now declared inline inside `dependencies.integrations.<id>` using the object dependency form (§4.1).
 
-- `scopes`: array of strings — the OAuth scopes the agent requests from the integration. Consumers compute the effective requested scope set as the union of `scopes` across the agent's configured integrations (§7.4).
+Consumers MUST keep accepting the deprecated `integrations_configuration` map for backward compatibility. When both forms are present for the same integration, the dependency-entry object form takes precedence and the deprecated map MUST be ignored for that integration.
 
 ## 5. Schema System
 
@@ -771,7 +852,7 @@ An integration authenticates the **upstream-credential hop** — the credential 
 
 - **`local`** — `source.server` references an `mcp-server` package by its AFPS package identity (`name`, a scoped name per §2.2) and a semver `version` range. This is the only source whose referenced server is itself a standalone MCPB-runnable artifact; the integration's authentication layer is applied by the AFPS runtime on top. The optional `vendored` boolean records that the referenced MCP server was vendored into the publishing pipeline at build time (MCPB bundles dependencies into the archive rather than resolving registry references at install time). Build-provenance for a vendored foreign package (for example a [Package URL]) MAY be recorded under `_meta`; it is never the reference mechanism.
 - **`remote`** — `source.remote` declares a hosted MCP endpoint with a `url` and a `transport` (`streamable-http` or `sse`). A remote source has no `mcp-server` package and no `.mcpb` form.
-- **`api`** — `source.api` declares a direct HTTP API surface reached through credential injection (no MCP server). `upload_protocols` MAY declare resumable upload protocols the API supports, as a closed-enum capability declaration: `google-resumable`, `s3-multipart`, `tus`, `ms-resumable`. Consumers MUST reject values outside this enum; adding a protocol requires a minor version bump of this specification.
+- **`api`** — `source.api` declares a direct HTTP API surface reached through credential injection (no MCP server). `upload_protocols` MAY declare resumable upload protocols the API supports as an **open** array of strings. AFPS v2.0 reserves and recommends the following values for interoperability: `google-resumable`, `s3-multipart`, `tus`, `ms-resumable`. Producers MAY emit other protocol identifiers (preferring a reverse-DNS qualified string such as `com.example/proprietary-resumable` for non-standard protocols) and consumers MUST preserve unknown values without rejecting them. Adding a recommended value does not require a specification revision.
 
 A source whose surface is not a local MCP server (`remote`, or any non-local API) cannot be expressed as an `mcp-server` package and has no `.mcpb` form. This is a property of the source kind, not a runnability gradient.
 
@@ -869,7 +950,11 @@ For auth methods of `type` `api_key`, `basic`, or `custom`, `credentials.schema`
   //           "encoding": "base64" },
   // Environment-variable injection (Kubernetes-style vocabulary).
   "env": {
-    "GMAIL_TOKEN": { "value": "{$credential.access_token}", "sensitive": true }
+    "GMAIL_TOKEN": {
+      "value": "{$credential.access_token}",
+      "sensitive": true,
+      "user_config_key": "GMAIL_TOKEN"
+    }
   },
   // File injection (Kubernetes-style vocabulary). `mode` is an octal string; default "0400".
   "files": {
@@ -879,7 +964,7 @@ For auth methods of `type` `api_key`, `basic`, or `custom`, `credentials.schema`
 ```
 
 - **`http`** — credential injection into an HTTP request. `in` (`header`, `query`, `cookie`) and `name` adopt the OpenAPI Security Scheme location vocabulary; `prefix` and `value` are AFPS additions (OpenAPI has no value template). The `http`+`Authorization`+`Bearer ` combination maps to the `Authorization: Bearer` convention. `encoding` is OPTIONAL and, when present, MUST be `base64` ([RFC 4648] §4), applied to the rendered `prefix`+`value` string before placement — expressing HTTP Basic vendor patterns (for example `value: "{$credential.email}/token:{$credential.api_key}"`, `prefix: "Basic "`, `encoding: "base64"`). Consumers MUST reject an unknown `encoding`. `allow_server_override` (boolean, default `false`) governs whether the source server may override the injected value. HTTP delivery is a man-in-the-middle/proxy injection in which the source server never sees the secret.
-- **`env`** — injection as one or more environment variables. Each entry has a `value` template and an OPTIONAL `sensitive` boolean. `env` delivery maps onto MCPB `user_config` → `${user_config.KEY}` (§3.4): the source server holds the secret. This is the delivery mode that lets a `local`-source integration's referenced `mcp-server` also run standalone in an MCPB host.
+- **`env`** — injection as one or more environment variables. Each entry has a `value` template, an OPTIONAL `sensitive` boolean, and an OPTIONAL `user_config_key` string. `env` delivery maps onto MCPB `user_config` → `${user_config.KEY}` (§3.4): the source server holds the secret. `user_config_key` names the MCPB `user_config` key that an AFPS build step MUST inject into the referenced `mcp-server` so the rendered `value` reaches the server through `${user_config.<user_config_key>}` in `mcp_config.env`. When `user_config_key` is omitted, consumers SHOULD default to the env-variable name itself (the map key). This is the delivery mode that lets a `local`-source integration's referenced `mcp-server` also run standalone in an MCPB host.
 - **`files`** — injection as one or more files. Each entry has a `value` template and an OPTIONAL `mode` (an octal string such as `"0400"`; default `"0400"`).
 
 `http` (proxy injection, server never holds the secret) and `env`/`files` (server holds the secret) are mutually exclusive per auth method: an auth method MUST NOT mix `http` with `env`/`files`.
@@ -910,10 +995,13 @@ Value templates use the runtime-expression grammar of §7.7 (`{$credential.<fiel
     // Arazzo Criterion vocabulary (condition + optional context + type). When omitted,
     // success defaults to HTTP 2xx (AFPS-defined; Arazzo leaves HTTP success undefined).
     "success_criteria": [ { "condition": "$statusCode == 200" } ],
-    // Outputs: each value is an Arazzo runtime expression OR an AFPS extractor object.
+    // Outputs: each value is an Arazzo runtime-expression string, an Arazzo
+    // Selector Object, OR an AFPS extractor object for cases Arazzo cannot
+    // express (cookie, jwt).
     "outputs": {
       "token": "$response.body#/access_token",
       "exp":   "$response.header.X-Expires-After",
+      "user":  { "context": "$response.body", "selector": "$.profile.id", "type": "jsonpath" },
       "csrf":  { "from": "cookie", "name": "XSRF-TOKEN" },
       "sub":   { "from": "jwt", "token": "{$outputs.token}", "path": "/sub" }
     },
@@ -926,10 +1014,13 @@ Value templates use the runtime-expression grammar of §7.7 (`{$credential.<fiel
 
 - **`request`** — the inline HTTP request issued to obtain the credential. `content_type` selects the body encoding.
 - **`success_criteria`** — an array of Arazzo Criterion objects (`condition`, optional `context`, optional `type` of `simple`/`regex`/`jsonpath`/`xpath`). When omitted, success is HTTP 2xx.
-- **`outputs`** — a map of named outputs. Each value is either an Arazzo runtime expression — `$statusCode`, `$response.body#/{json-pointer}` ([RFC 6901]), `$response.header.{name}`, `$outputs.{name}` — or an AFPS extractor object that extends Arazzo for cases it cannot express:
-  - `{ "from": "cookie", "name": "<cookie-name>" }`;
-  - `{ "from": "jwt", "token": "{$outputs.<name>}", "path": "/<json-pointer>" }`;
-  - `{ "from": "regex", "source": "{$response.body}", "pattern": "<regex>", "group": <n> }`.
+- **`outputs`** — a map of named outputs. Each value is one of:
+  - an **Arazzo runtime-expression string** (Arazzo §5.9): `$statusCode`, `$response.body#/{json-pointer}` ([RFC 6901]), `$response.header.{name}`, `$outputs.{name}`;
+  - an **Arazzo Selector Object** (Arazzo 1.1 §5.8.13) with `{ context (runtime expression), selector (string), type ("jsonpath" | "xpath" | "jsonpointer") }`. Consumers MUST resolve `jsonpath` per [RFC 9535], `jsonpointer` per [RFC 6901], and `xpath` per [XML Path Language 3.1];
+  - an **AFPS extractor object** that extends Arazzo for cases the Selector Object cannot express:
+    - `{ "from": "cookie", "name": "<cookie-name>" }`;
+    - `{ "from": "jwt", "token": "{$outputs.<name>}", "path": "/<json-pointer>" }`;
+    - `{ "from": "regex", "source": "{$response.body}", "pattern": "<regex>", "group": <n> }` — note: the equivalent Arazzo Selector Object form (when only a single capture is needed) is `{ "context": "...", "selector": "<regex>", "type": "regex" }` carried inside a Criterion; AFPS keeps `from: regex` as the output-side spelling for symmetry with `cookie`/`jwt`. Producers MAY emit either; consumers MUST accept both.
 - **`expires_in_output`** — the name of the output that carries credential expiry.
 - **`identity_outputs`** — the names of outputs that establish the connection identity.
 - **`limits`** — OPTIONAL request guardrails: `request_timeout_ms`, `max_response_bytes`.
@@ -940,7 +1031,13 @@ Runtime expressions are embedded into templates with `{$expr}` (for example `{$o
 
 ### 7.8 Per-Tool Metadata
 
-`tools` is an OPTIONAL map keyed by tool name, carrying per-tool authorization metadata for `local` and `remote` sources.
+`integration.tools` is an OPTIONAL **sparse policy table** keyed by tool name. It carries per-tool authorization metadata for `local` and `remote` sources. It is NOT the catalog of "tools this integration exposes" — that catalog is canonical to the referenced surface:
+
+- for `source.kind = local`, the canonical catalog is the MCPB `tools[]` array of the referenced `mcp-server` package (§3.4);
+- for `source.kind = remote`, the canonical catalog is obtained by introspecting the remote MCP endpoint at runtime;
+- for `source.kind = api`, there is no MCP-tool catalog and `integration.tools` is generally not used.
+
+When `integration.tools.<name>` is declared, it **augments** the canonical entry for `<name>`. Consumers SHOULD validate at install (or at publish, for a registry) that each key in `integration.tools` corresponds to a tool present in the resolved canonical catalog.
 
 ```jsonc
 "tools": {
@@ -956,6 +1053,12 @@ Runtime expressions are embedded into templates with `{$expr}` (for example `{$o
 - `required_auth_key` (string) — selects which `auths` entry a tool uses when the integration declares more than one.
 - `url_patterns` (array) — defence-in-depth allowlist of `{ pattern, methods? }`, where `pattern` is a glob (`*` single segment, `**` multi-segment) and `methods` is an OPTIONAL list of HTTP methods.
 
+#### `hidden_tools`
+
+`integration.hidden_tools` is an OPTIONAL array of tool names. Tools listed here exist in the resolved canonical catalog but MUST NOT be exposed to the agent's tool picker / `tools/list` surface. Tools referenced by a `connect.tool` (run-start primitives) are auto-hidden, so `hidden_tools` only needs to enumerate the remaining tool names to suppress.
+
+> **Note (placement).** Per-tool policy lives on the integration because the policy itself (required scopes, allowed URL patterns, auth-key selection) is a property of how the credentialed binding is used, not of the server's tool list. Producers MAY additionally surface per-tool *advisory* metadata on the `mcp-server` side under `_meta["dev.afps/mcp-server"].tools.<name>` (§3.4) when the same metadata is useful when the server runs standalone in an MCPB host.
+
 ### 7.9 URI Restrictions
 
 An auth method MAY restrict which upstream URIs the integration may send credentials to:
@@ -969,8 +1072,22 @@ Consumers MUST NOT send credentials to URIs outside the authorized set unless `a
 
 An integration MAY declare a `setup_guide` with human-facing instructions for configuring credentials (for example, registering an OAuth client):
 
-- `setup_guide.callback_url_hint` (string) — a callback hint, often containing a placeholder such as `{{callback_url}}`.
 - `setup_guide.steps` (array) — an ordered list of steps; each step MUST have a `label` and MAY have a `url`.
+
+`callback_url_hint` is a property of an OAuth2 auth method (not of the integration as a whole), and is therefore declared under `auths.<key>.callback_url_hint` (string; often containing a placeholder such as `{{callback_url}}`). The top-level `setup_guide.callback_url_hint` from earlier drafts is **deprecated**; consumers MUST keep accepting it for backward compatibility and SHOULD treat it as a fallback when the auth method does not declare one.
+
+### 7.11 OpenAPI Security Scheme Mapping (Informative)
+
+An AFPS auth method maps onto an [OpenAPI] Security Scheme (also used by [A2A] `securitySchemes` and the [OpenAI Apps SDK]). Consumers MAY use this mapping to expose AFPS integrations to A2A clients, Apps SDK hosts, or other OpenAPI-aware tooling. Conversely, an integration manifest MAY be derived (in part) from a published OpenAPI Security Scheme.
+
+| AFPS `auths.<key>.type` | OpenAPI Security Scheme |
+| --- | --- |
+| `oauth2` | `{ "type": "oauth2", "flows": { ... } }` — flows derived from `authorization_endpoint`/`token_endpoint`/`default_scopes`/`scope_catalog` |
+| `api_key` | `{ "type": "apiKey", "in": "<delivery.http.in>", "name": "<delivery.http.name>" }` — when `delivery.http` is declared |
+| `basic` | `{ "type": "http", "scheme": "basic" }` |
+| `custom` | not standardly representable; SHOULD be omitted from a derived OpenAPI document or recorded under `_meta` (§10) |
+
+This mapping is informative and does not impose normative requirements on AFPS consumers.
 
 ## 8. Security Considerations
 
@@ -1079,9 +1196,11 @@ AFPS adopts the Model Context Protocol `_meta` key convention as its single exte
 
 The `_meta` object is a record of namespaced keys. Each key is an OPTIONAL reverse-DNS prefix (a dotted label sequence followed by `/`) plus a name; for example `dev.afps/policy` or `dev.appstrate/cost-center`. The value at a namespaced key MUST be a JSON object.
 
-- The `dev.afps/` prefix (reverse-DNS of the AFPS project domain `afps.dev`) is the vendor-neutral, spec-aligned namespace any AFPS runtime reads.
-- Vendors use their own reverse-DNS prefix for implementation-specific data (for example `dev.appstrate/`).
+- The `dev.afps/` prefix (reverse-DNS of the AFPS project domain `afps.dev`) is the vendor-neutral, spec-aligned namespace any AFPS runtime reads. This namespace is reserved for use by this specification and its successors.
+- Vendors use their own reverse-DNS prefix for implementation-specific data (for example `dev.appstrate/`). A vendor MUST use a reverse-DNS prefix derived from a domain it controls.
 - Producers MUST NOT use an `mcp` or `modelcontextprotocol` prefix; those are reserved by MCP.
+
+> **Editorial note (namespace control).** The `afps.dev` domain corresponding to the `dev.afps/` prefix is under active registration by the AFPS maintainers. Implementations published before the domain is operationally controlled SHOULD additionally accept the transitional prefix `dev.appstrate.afps/` (which is unambiguously vendor-controlled) and treat it as an alias of `dev.afps/`. Once the domain is controlled, this alias will be deprecated.
 
 This convention:
 
@@ -1108,6 +1227,9 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 - **[RFC 8414]** Jones, M., Sakimura, N., Bradley, J., "OAuth 2.0 Authorization Server Metadata", RFC 8414, June 2018. https://datatracker.ietf.org/doc/html/rfc8414
 - **[RFC 8707]** Campbell, B., Bradley, J., Jay, H., "Resource Indicators for OAuth 2.0", RFC 8707, February 2020. https://datatracker.ietf.org/doc/html/rfc8707
 - **[RFC 4648]** Josefsson, S., "The Base16, Base32, and Base64 Data Encodings", RFC 4648, October 2006. https://datatracker.ietf.org/doc/html/rfc4648
+- **[RFC 9535]** Bormann, C., Bray, T., Gössner, S., "JSONPath: Query Expressions for JSON", RFC 9535, February 2024. https://datatracker.ietf.org/doc/html/rfc9535
+- **[XML Path Language 3.1]** W3C Recommendation, "XML Path Language (XPath) 3.1", March 2017. https://www.w3.org/TR/xpath-31/
+- **[SPDX]** "SPDX License List". https://spdx.org/licenses/
 - **[OpenID Connect Discovery]** Sakimura, N., et al., "OpenID Connect Discovery 1.0". https://openid.net/specs/openid-connect-discovery-1_0.html
 - **[OpenID Connect Core]** Sakimura, N., et al., "OpenID Connect Core 1.0". https://openid.net/specs/openid-connect-core-1_0.html
 - **[MCPB]** MCP Bundle (MCPB) manifest and bundle format. https://github.com/anthropics/mcpb
@@ -1123,6 +1245,7 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 - **[A2A]** Agent-to-Agent Protocol. https://a2a-protocol.org/latest/specification/
 - **[Agent Skills]** Anthropic Agent Skills Specification. https://agentskills.io/home
 - **[OpenAPI]** OpenAPI Specification. https://spec.openapis.org/oas/latest.html
+- **[OpenAI Apps SDK]** OpenAI Apps SDK Reference. https://developers.openai.com/apps-sdk/reference
 - **[Package URL]** Package URL (purl) Specification, ECMA-427. https://github.com/package-url/purl-spec
 - **[Kubernetes]** Kubernetes documentation, "Distribute Credentials Securely Using Secrets". https://kubernetes.io/docs/concepts/configuration/secret/
 
@@ -1139,17 +1262,27 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `type` | all manifests | string | MUST | `agent\|skill\|mcp-server\|integration`; under `_meta` for `mcp-server` | none |
 | `display_name` | all manifests | string | MUST for agent; SHOULD for skill, mcp-server, integration | agent value min length 1 | none |
 | `description` | all manifests | string | MAY | free text | none |
+| `long_description` | all manifests | string | MAY | Markdown long-form description (MCPB-aligned) | none |
 | `keywords` | all manifests | string[] | MAY | arbitrary strings | none |
-| `license` | all manifests | string | MAY | free text | none |
-| `repository` | all manifests | string | MAY | URI recommended | none |
+| `license` | all manifests | string | MAY | SPDX identifier RECOMMENDED | none |
+| `author` | all manifests | string \| object | MUST for agent; MAY for others | string form, or `{ name (REQUIRED), email?, url? }` (MCPB/npm-aligned) | none |
+| `repository` | all manifests | string \| object | MAY | URI string, or `{ type, url, directory? }` (MCPB/npm-aligned) | none |
+| `homepage` | all manifests | string | MAY | URI; package homepage (MCPB-aligned) | none |
+| `documentation` | all manifests | string | MAY | URI; documentation page (MCPB-aligned) | none |
+| `support` | all manifests | string | MAY | URI; support/issues (MCPB-aligned) | none |
+| `icon` | all manifests | string | MAY | relative archive path to a PNG, or a URI (MCPB-aligned) | none |
+| `icons` | all manifests | object[] | MAY | `[{ src, size?, theme? }]` (MCPB-aligned) | none |
+| `screenshots` | all manifests | string[] | MAY | image paths/URIs (MCPB-aligned) | none |
+| `privacy_policies` | all manifests | string[] | MAY | privacy-policy URIs (MCPB-aligned) | none |
+| `compatibility` | all manifests | object | MAY | `{ platforms?, runtimes?, clients? }` (MCPB-aligned) | none |
 | `schema_version` | agent, skill, integration | string | MUST for agent; MAY for skill, integration | `MAJOR.MINOR`; producers MUST emit `2.0`; n/a for mcp-server | none |
 | `dependencies` | all manifests | object | MAY | optional dependency maps | none |
-| `dependencies.skills` | all manifests | map | MAY | keys scoped names, values valid semver ranges | none |
-| `dependencies.mcp_servers` | all manifests | map | MAY | keys scoped names, values valid semver ranges | none |
-| `dependencies.integrations` | all manifests | map | MAY | keys scoped names, values valid semver ranges | none |
-| `author` | agent | string | MUST | free text | none |
-| `integrations_configuration` | agent | map | MAY | keyed by integration id | none |
-| `integrations_configuration.<id>.scopes` | agent | string[] | MAY | requested scopes | none |
+| `dependencies.skills` | all manifests | map | MAY | keys scoped names; values semver range string or `{ version, ... }` (§4.1) | none |
+| `dependencies.mcp_servers` | all manifests | map | MAY | keys scoped names; values semver range string or `{ version, ... }` (§4.1) | none |
+| `dependencies.integrations` | all manifests | map | MAY | keys scoped names; values semver range string or `{ version, scopes?, auth_key? }` (§4.1) | none |
+| `dependencies.integrations.<id>.scopes` | all manifests | string[] | MAY | requested OAuth scopes for the integration (§7.4) | none |
+| `dependencies.integrations.<id>.auth_key` | all manifests | string | MAY | selects an `auths.<key>` entry on the integration | none |
+| `integrations_configuration` | agent | map | MAY (deprecated) | superseded by `dependencies.integrations.<id>` object form (§4.4); kept for backward compatibility | none |
 | `input` | agent | object | MAY | per-run data; requires `schema` child | none |
 | `input.schema` | agent | object | MUST if `input` present | AFPS schema object | none |
 | `output` | agent | object | MAY | per-run result; requires `schema` child | none |
@@ -1168,8 +1301,8 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `source` | integration | object | MUST | `kind` ∈ `local\|remote\|api` plus matching sub-object | none |
 | `source.server` | integration | object | MUST for `kind=local` | `{ name (scoped), version (range), vendored? }` | none |
 | `source.remote` | integration | object | MUST for `kind=remote` | `{ url, transport: streamable-http\|sse }` | none |
-| `source.api` | integration | object | MUST for `kind=api` | `{ upload_protocols?: closed enum }` | none |
-| `source.api.upload_protocols` | integration | string[] | MAY | `google-resumable`, `s3-multipart`, `tus`, `ms-resumable` | none |
+| `source.api` | integration | object | MUST for `kind=api` | `{ upload_protocols?: open string array }` | none |
+| `source.api.upload_protocols` | integration | string[] | MAY | open array; reserved values: `google-resumable`, `s3-multipart`, `tus`, `ms-resumable`. Custom protocols SHOULD use a reverse-DNS prefix | none |
 | `auths` | integration | object | MUST | map keyed by `^[a-z][a-z0-9_]*$`; ≥1 entry | none |
 | `auths.<key>.type` | integration | string | MUST | `oauth2\|api_key\|basic\|custom` | none |
 | `auths.<key>.issuer` | integration | string | SHOULD for oauth2 | OAuth/OIDC issuer; enables discovery | none |
@@ -1189,21 +1322,23 @@ When an extension carried under `_meta` gains broad adoption across multiple imp
 | `auths.<key>.delivery.http` | integration | object | MAY | `{ in, name, prefix?, value, encoding?, allow_server_override? }` | none |
 | `auths.<key>.delivery.http.in` | integration | string | MUST if `http` present | `header\|query\|cookie` (OpenAPI) | none |
 | `auths.<key>.delivery.http.encoding` | integration | string | MAY | `base64` (RFC 4648 §4) | none |
-| `auths.<key>.delivery.env` | integration | object | MAY | map of `VAR` → `{ value, sensitive? }`; maps to MCPB `user_config` | none |
+| `auths.<key>.delivery.env` | integration | object | MAY | map of `VAR` → `{ value, sensitive?, user_config_key? }`; maps to MCPB `user_config` | none |
+| `auths.<key>.delivery.env.<var>.user_config_key` | integration | string | MAY | MCPB `user_config` key for `local`-source binding; defaults to the env-variable name | none |
+| `auths.<key>.callback_url_hint` | integration | string | MAY | OAuth-client registration callback hint (often containing `{{callback_url}}`) | none |
 | `auths.<key>.delivery.files` | integration | object | MAY | map of path → `{ value, mode? }`; `mode` octal string | `mode` `"0400"` |
 | `auths.<key>.connect` | integration | object | MAY (custom only) | exactly one of `login` / `tool`; optional `limits` | none |
 | `auths.<key>.connect.login.request` | integration | object | MUST if `login` present | inline HTTP request | none |
 | `auths.<key>.connect.login.success_criteria` | integration | object[] | MAY | Arazzo Criterion; default HTTP 2xx | HTTP 2xx |
-| `auths.<key>.connect.login.outputs` | integration | object | MAY | Arazzo runtime expression or AFPS extractor (`cookie`/`jwt`/`regex`) | none |
+| `auths.<key>.connect.login.outputs` | integration | object | MAY | Arazzo runtime-expression string, Arazzo Selector Object `{context,selector,type}`, or AFPS extractor (`cookie`/`jwt`/`regex`) | none |
 | `auths.<key>.authorized_uris` | integration | string[] | MAY | allowed upstream URI patterns (glob) | none |
 | `auths.<key>.allow_all_uris` | integration | boolean | MAY | unrestricted upstream access | `false` |
-| `tools` | integration | object | MAY | per-tool metadata for local/remote sources | none |
+| `tools` | integration | object | MAY | sparse per-tool policy table (augments canonical tool catalog of the referenced source); keys MUST resolve in the canonical catalog | none |
 | `tools.<name>.required_scopes` | integration | string[] | MAY | scopes a tool requires | none |
 | `tools.<name>.required_auth_key` | integration | string | MAY | selects an `auths` entry | none |
 | `tools.<name>.url_patterns` | integration | object[] | MAY | `{ pattern (glob), methods? }` | none |
-| `icon` | integration | string | MAY | relative archive path to PNG, or URI | none |
+| `hidden_tools` | integration | string[] | MAY | tool names suppressed from the agent's surface; tools used as `connect.tool` are auto-hidden | none |
 | `setup_guide` | integration | object | MAY | setup metadata | none |
-| `setup_guide.callback_url_hint` | integration | string | MAY | callback placeholder text | none |
+| `setup_guide.callback_url_hint` | integration | string | MAY (deprecated) | superseded by `auths.<key>.callback_url_hint`; kept for backward compatibility | none |
 | `setup_guide.steps` | integration | object[] | MAY | ordered setup steps | none |
 | `setup_guide.steps[].label` | integration | string | MUST if step present | non-empty recommended | none |
 | `setup_guide.steps[].url` | integration | string | MAY | URI recommended | none |
@@ -1267,7 +1402,7 @@ AFPS 1.x defined two package types — `tool` and `provider` — and a camelCase
 | --- | --- |
 | `displayName` | `display_name` |
 | `schemaVersion` | `schema_version` |
-| `providersConfiguration` | `integrations_configuration` |
+| `providersConfiguration` | `dependencies.integrations.<id>` object form (§4.1); `integrations_configuration` accepted for backward compatibility |
 | `dependencies.providers` | `dependencies.integrations` |
 | `dependencies.tools` | `dependencies.mcp_servers` |
 | `tool.inputSchema` | (server tools advertise no input schema in MCPB; obtained from the running server) |
@@ -1285,10 +1420,18 @@ AFPS 1.x defined two package types — `tool` and `provider` — and a camelCase
 | `definition.allowAllUris` | `auths.<key>.allow_all_uris` |
 | `definition.availableScopes` | `auths.<key>.scope_catalog` |
 | `definition.uploadProtocols` | `source.api.upload_protocols` |
-| `setupGuide.callbackUrlHint` | `setup_guide.callback_url_hint` |
+| `setupGuide.callbackUrlHint` | `auths.<key>.callback_url_hint` (preferred); `setup_guide.callback_url_hint` accepted as a deprecated fallback |
 | extension fields (`x-*`) | `_meta` reverse-DNS keys (§10) |
 
 The 1.x OAuth1 auth mode (`definition.oauth1`) has no AFPS 2.0 equivalent in the core vocabulary; an integration requiring OAuth1 SHOULD model it as a `custom` auth method with a `connect` flow (§7.7) or carry it under `_meta`.
+
+#### New common fields (AFPS 1.x → 2.0)
+
+The following common fields were added in AFPS 2.0 and are aligned with MCPB. They have no AFPS 1.x equivalent; producers MAY emit them when migrating, consumers MUST tolerate their absence in legacy manifests:
+
+`long_description`, `homepage`, `documentation`, `support`, `icons` (array form), `screenshots`, `privacy_policies`, `compatibility` (structured form).
+
+`author` and `repository` now accept either a string (1.x-compatible) or a structured object (MCPB/npm-aligned). The legacy integration-level `icon` field is folded into the common-fields `icon` and `icons` (§3.1).
 
 ### Appendix E. Origins
 

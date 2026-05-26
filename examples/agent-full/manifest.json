@@ -18,15 +18,13 @@
       "@example/fetch-json": "^1.0.0"
     },
     "integrations": {
-      "@example/gmail": "^1.0.0"
-    }
-  },
-  "integrations_configuration": {
-    "@example/gmail": {
-      "scopes": [
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.send"
-      ]
+      "@example/gmail": {
+        "version": "^1.0.0",
+        "scopes": [
+          "https://www.googleapis.com/auth/gmail.readonly",
+          "https://www.googleapis.com/auth/gmail.send"
+        ]
+      }
     }
   },
   "input": {

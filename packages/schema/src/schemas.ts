@@ -143,20 +143,50 @@ export const schemaWrapper = z.object({
 // Dependencies (§4)
 // ─────────────────────────────────────────────
 
+/**
+ * Generic dependency entry: a semver range string, or an object whose `version`
+ * member is a semver range. Object form is the carrier for per-dependency-type
+ * configuration (e.g. `scopes`/`auth_key` for integrations).
+ */
+const baseDependencyObject = z.looseObject({
+  version: semverRange,
+});
+
+const dependencyValue = z.union([semverRange, baseDependencyObject]);
+
+/** Dependency entry for `dependencies.integrations.<id>` (§4.1). */
+const integrationDependencyObject = z.looseObject({
+  version: semverRange,
+  scopes: z.array(z.string()).optional(),
+  auth_key: z
+    .string()
+    .regex(AUTH_KEY_REGEX, { error: "auth_key must match ^[a-z][a-z0-9_]*$" })
+    .optional(),
+});
+
+const integrationDependencyValue = z.union([semverRange, integrationDependencyObject]);
+
 const dependenciesSchema = z
   .looseObject({
-    skills: z.record(scopedName, semverRange).optional(),
-    mcp_servers: z.record(scopedName, semverRange).optional(),
-    integrations: z.record(scopedName, semverRange).optional(),
+    skills: z.record(scopedName, dependencyValue).optional(),
+    mcp_servers: z.record(scopedName, dependencyValue).optional(),
+    integrations: z.record(scopedName, integrationDependencyValue).optional(),
   })
   .optional();
 
 // ─────────────────────────────────────────────
-// Agent integrations_configuration (§4.4)
+// Agent integrations_configuration (§4.4 — deprecated)
 // ─────────────────────────────────────────────
 
+/**
+ * Deprecated in AFPS 2.0 (§4.4). Per-integration configuration now lives inline
+ * inside `dependencies.integrations.<id>` (object form). Consumers MUST keep
+ * accepting this field; values are merged into dependency entries with the
+ * dependency entry winning on conflict.
+ */
 export const integrationConfiguration = z.looseObject({
   scopes: z.array(z.string()).optional(),
+  auth_key: z.string().optional(),
 });
 
 // ─────────────────────────────────────────────
@@ -204,15 +234,16 @@ const MCP_SERVER_META_KEY = "dev.afps/mcp-server";
 export const transportEnum = z.enum(["streamable-http", "sse"]);
 
 /**
- * Resumable upload protocols an `api` source supports (§7.1). Closed enum:
- * consumers MUST reject values outside this set.
+ * Reserved resumable upload protocols an `api` source MAY declare (§7.1). AFPS
+ * 2.0 reserves these values for interoperability; producers MAY emit other
+ * (reverse-DNS-qualified) values and consumers MUST tolerate them.
  */
-export const uploadProtocolEnum = z.enum([
+export const RESERVED_UPLOAD_PROTOCOLS = [
   "google-resumable",
   "s3-multipart",
   "tus",
   "ms-resumable",
-]);
+] as const;
 
 const localSource = z.looseObject({
   kind: z.literal("local"),
@@ -235,7 +266,7 @@ const apiSource = z.looseObject({
   kind: z.literal("api"),
   api: z.looseObject({
     upload_protocols: z
-      .array(uploadProtocolEnum)
+      .array(z.string().min(1))
       .refine((arr) => new Set(arr).size === arr.length, {
         error: "upload_protocols must contain unique values",
       })
@@ -296,6 +327,9 @@ const httpDelivery = z.looseObject({
 const envDeliveryEntry = z.looseObject({
   value: z.string().min(1),
   sensitive: z.boolean().optional(),
+  // MCPB user_config key for local-source binding (§7.6). Defaults to the
+  // env-variable name (the map key) when omitted.
+  user_config_key: z.string().min(1).optional(),
 });
 
 const fileDeliveryEntry = z.looseObject({
@@ -329,11 +363,22 @@ const arazzoCriterion = z.looseObject({
 });
 
 /**
- * A connect.login output: either an Arazzo runtime-expression string
- * (`$response.body#/...`, `$statusCode`, …) or an AFPS extractor object
- * (`{ from: cookie|jwt|regex, ... }`) (§7.7).
+ * A connect.login output value (§7.7). Polymorphic across three shapes:
+ *  - Arazzo runtime-expression string (`$response.body#/...`, `$statusCode`, …);
+ *  - Arazzo 1.1 Selector Object `{ context, selector, type }`
+ *    (type ∈ "jsonpath" | "xpath" | "jsonpointer");
+ *  - AFPS extractor object `{ from: cookie|jwt|regex, ... }` for cases Arazzo
+ *    cannot express.
  */
-const connectOutput = z.union([z.string().min(1), z.looseObject({ from: z.string().min(1) })]);
+const arazzoSelector = z.looseObject({
+  context: z.string().min(1),
+  selector: z.string().min(1),
+  type: z.enum(["jsonpath", "xpath", "jsonpointer"]),
+});
+
+const afpsExtractor = z.looseObject({ from: z.string().min(1) });
+
+const connectOutput = z.union([z.string().min(1), arazzoSelector, afpsExtractor]);
 
 const connectLogin = z.looseObject({
   request: connectRequest,
@@ -389,6 +434,9 @@ export const authMethod = z.looseObject({
   delivery: deliverySchema,
   // URI restrictions (§7.9)
   ...uriRestrictionFields,
+  // OAuth-client registration hint (§7.10). Auth-method-scoped to replace the
+  // deprecated `setup_guide.callback_url_hint`.
+  callback_url_hint: z.string().optional(),
 });
 
 // --- Per-tool metadata (§7.8) ---
@@ -508,6 +556,38 @@ export function createSchemas(majorVersion: number) {
       error: `Must follow MAJOR.MINOR format (e.g. "${majorVersion}.0")`,
     });
 
+  // Author/Repository: string or structured object (§3.1).
+  const authorObject = z.looseObject({
+    name: z.string().min(1),
+    email: z.string().optional(),
+    url: z.string().optional(),
+  });
+  const authorField = z.union([z.string().min(1), authorObject]);
+
+  const repositoryObject = z.looseObject({
+    type: z.string().min(1),
+    url: z.string().min(1),
+    directory: z.string().optional(),
+  });
+  const repositoryField = z.union([z.string().min(1), repositoryObject]);
+
+  // Icon variant (MCPB-aligned, §3.1).
+  const iconObject = z.looseObject({
+    src: z.string().min(1),
+    size: z
+      .string()
+      .regex(/^\d+x\d+$/, { error: 'size must be "WIDTHxHEIGHT", e.g. "128x128"' })
+      .optional(),
+    theme: z.enum(["light", "dark", "high-contrast"]).optional(),
+  });
+
+  // Compatibility (MCPB-aligned, §3.1).
+  const compatibilityObject = z.looseObject({
+    platforms: z.array(z.enum(["darwin", "win32", "linux"])).optional(),
+    runtimes: z.record(z.string(), z.string()).optional(),
+    clients: z.record(z.string(), z.string()).optional(),
+  });
+
   // Common fields shared by agent / skill / integration (§3.1).
   const commonFields = {
     name: scopedName,
@@ -515,9 +595,19 @@ export function createSchemas(majorVersion: number) {
     type: packageTypeEnum,
     display_name: z.string().optional(),
     description: z.string().optional(),
+    long_description: z.string().optional(),
     keywords: z.array(z.string()).optional(),
     license: z.string().optional(),
-    repository: z.string().optional(),
+    author: authorField.optional(),
+    repository: repositoryField.optional(),
+    homepage: z.string().optional(),
+    documentation: z.string().optional(),
+    support: z.string().optional(),
+    icon: z.string().optional(),
+    icons: z.array(iconObject).optional(),
+    screenshots: z.array(z.string()).optional(),
+    privacy_policies: z.array(z.string()).optional(),
+    compatibility: compatibilityObject.optional(),
     schema_version: schemaVersionField.optional(),
     dependencies: dependenciesSchema,
     _meta: metaSchema.optional(),
@@ -529,7 +619,8 @@ export function createSchemas(majorVersion: number) {
     type: z.literal("agent"),
     schema_version: schemaVersionField,
     display_name: z.string().min(1),
-    author: z.string().min(1),
+    author: authorField, // REQUIRED for agent
+    // Deprecated in AFPS 2.0 (§4.4); kept for backward compatibility.
     integrations_configuration: z.record(scopedName, integrationConfiguration).optional(),
     input: schemaWrapper.optional(),
     output: schemaWrapper.optional(),
@@ -596,7 +687,6 @@ export function createSchemas(majorVersion: number) {
       type: z.literal("integration"),
       source: integrationSource,
       auths: z.record(z.string().regex(AUTH_KEY_REGEX), authMethod),
-      icon: z.string().optional(),
       // `tools` is a SPARSE POLICY TABLE keyed by tool name — it carries
       // `required_scopes` / `required_auth_key` / `url_patterns` per tool
       // that needs them. It is NOT the catalog of "tools this integration

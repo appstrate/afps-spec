@@ -54,11 +54,11 @@
         "https://gmail.googleapis.com/*",
         "https://www.googleapis.com/gmail/*"
       ],
-      "allow_all_uris": false
+      "allow_all_uris": false,
+      "callback_url_hint": "Set the authorized redirect URI to: {{callbackUrl}}"
     }
   },
   "setup_guide": {
-    "callback_url_hint": "Set the authorized redirect URI to: {{callbackUrl}}",
     "steps": [
       {
         "label": "Create a Google Cloud project",

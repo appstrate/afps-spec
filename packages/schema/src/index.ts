@@ -29,7 +29,7 @@ export {
   // integration source (§7.1)
   integrationSource,
   transportEnum,
-  uploadProtocolEnum,
+  RESERVED_UPLOAD_PROTOCOLS,
   // integration auth (§7.2 – §7.10)
   authTypeEnum,
   authMethod,

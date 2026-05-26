@@ -663,7 +663,7 @@ describe("integration source (§7.1)", () => {
     });
   });
 
-  test("api source: upload_protocols closed enum + uniqueness", () => {
+  test("api source: upload_protocols open array + uniqueness", () => {
     expectValid(integrationManifestSchema, validIntegrationApiKey);
     expectValid(integrationManifestSchema, {
       ...validIntegrationApiKey,
@@ -673,9 +673,11 @@ describe("integration source (§7.1)", () => {
       ...validIntegrationApiKey,
       source: { kind: "api", api: { upload_protocols: ["s3-multipart", "tus", "ms-resumable"] } },
     });
-    expectInvalid(integrationManifestSchema, {
+    // Open string array (§7.1): unknown values are accepted; producers SHOULD
+    // use a reverse-DNS qualifier for non-standard protocols.
+    expectValid(integrationManifestSchema, {
       ...validIntegrationApiKey,
-      source: { kind: "api", api: { upload_protocols: ["fake-protocol"] } },
+      source: { kind: "api", api: { upload_protocols: ["com.example/proprietary-resumable"] } },
     });
     expectInvalid(integrationManifestSchema, {
       ...validIntegrationApiKey,
