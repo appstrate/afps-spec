@@ -146,14 +146,14 @@ export const schemaWrapper = z.object({
  * member is a semver range. Object form is the carrier for per-dependency-type
  * configuration (e.g. `scopes`/`auth_key` for integrations).
  */
-const baseDependencyObject = z.looseObject({
+export const baseDependencyObject = z.looseObject({
   version: semverRange,
 });
 
-const dependencyValue = z.union([semverRange, baseDependencyObject]);
+export const dependencyValue = z.union([semverRange, baseDependencyObject]);
 
 /** Dependency entry for `dependencies.integrations.<id>` (§4.1). */
-const integrationDependencyObject = z.looseObject({
+export const integrationDependencyObject = z.looseObject({
   version: semverRange,
   scopes: z.array(z.string()).optional(),
   auth_key: z
@@ -162,9 +162,9 @@ const integrationDependencyObject = z.looseObject({
     .optional(),
 });
 
-const integrationDependencyValue = z.union([semverRange, integrationDependencyObject]);
+export const integrationDependencyValue = z.union([semverRange, integrationDependencyObject]);
 
-const dependenciesSchema = z
+export const dependenciesSchema = z
   .looseObject({
     skills: z.record(scopedName, dependencyValue).optional(),
     mcp_servers: z.record(scopedName, dependencyValue).optional(),

@@ -23,6 +23,12 @@ export {
   schemaObject,
   schemaWrapper,
   integrationConfiguration,
+  // dependencies (§4)
+  dependenciesSchema,
+  dependencyValue,
+  baseDependencyObject,
+  integrationDependencyValue,
+  integrationDependencyObject,
   // mcp-server (§3.4)
   mcpServerTypeEnum,
   // integration source (§7.1)
